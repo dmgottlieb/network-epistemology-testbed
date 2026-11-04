@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Network Epistemology Testbed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@600&display=swap">
+<style>
+:root {
+  --bg: #f3f5f7; --surface: #ffffff; --ink: #111820; --ink-2: #455060; --muted: #747f8e; --rule: #dce1e7; --accent: #0e6c64;
+  --display: "IBM Plex Serif", Georgia, serif; --body: "IBM Plex Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0d1115; --surface: #151a20; --ink: #e8ecf1; --ink-2: #b1bac6; --muted: #7d8796; --rule: #27303a; --accent: #45b8aa; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0d1115; --surface: #151a20; --ink: #e8ecf1; --ink-2: #b1bac6; --muted: #7d8796; --rule: #27303a; --accent: #45b8aa; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); }
+.wrap { max-width: 880px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px; display: grid; gap: 22px; }
+h1 { font-family: var(--display); font-size: clamp(28px, 4vw, 40px); margin: 0; line-height: 1.2; text-wrap: balance; }
+p { margin: 0; color: var(--ink-2); max-width: 68ch; }
+.models { display: grid; gap: 12px; list-style: none; padding: 0; margin: 0; }
+.model { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; display: grid; gap: 4px; }
+.model a { color: var(--ink); font-weight: 600; font-size: 17px; text-decoration: none; }
+.model a:hover { color: var(--accent); }
+.model .tag { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.model.planned { background: transparent; border-style: dashed; }
+.model.planned .title { font-weight: 600; color: var(--ink-2); }
+h2 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 10px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Network Epistemology Testbed</h1>
+  <p>Interactive implementations of models from network epistemology: how the structure of who-talks-to-whom in a scientific community shapes what that community comes to believe. Every model runs in the browser with adjustable parameters, seeded runs you can replay, and a Monte Carlo runner for measuring effects.</p>
+
+  <h2>Models</h2>
+  <ul class="models">
+    <li class="model">
+      <span class="tag">Model 1 · Two-armed bandit</span>
+      <a href="zollman.html">The Zollman Effect</a>
+      <p>Bayesian agents choose between a known action and an uncertain, slightly better one, sharing results with network neighbours. Sparse networks can be more reliable than complete ones, but only when the problem is hard. After Bala &amp; Goyal (1998), Zollman (2007) and Rosenstock, Bruner &amp; O’Connor (2017).</p>
+    </li>
+  </ul>
+
+  <h2>Possible next models</h2>
+  <ul class="models">
+    <li class="model planned"><span class="title">Scientific polarization</span><p>Agents discount evidence from colleagues whose beliefs differ from theirs (O’Connor &amp; Weatherall 2018).</p></li>
+    <li class="model planned"><span class="title">Propaganda and selective sharing</span><p>An industry propagandist shares only the unfavourable results (Weatherall, O’Connor &amp; Bruner 2020).</p></li>
+    <li class="model planned"><span class="title">Conformity</span><p>Agents trade off evidence against agreeing with their neighbours (Weatherall &amp; O’Connor 2021).</p></li>
+    <li class="model planned"><span class="title">Beta-belief agents and transient diversity</span><p>Agents with beta-distributed beliefs about both actions; extreme priors as a substitute for sparse networks (Zollman 2010).</p></li>
+  </ul>
+</div>
+</body>
+</html>

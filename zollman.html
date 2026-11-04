@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Zollman Effect</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Interactive two-armed bandit model of an epistemic community: why less-connected scientific networks can be more reliable.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+/* Layout: an instrument bench. A parameter rail on the left drives two coupled
+   network views side by side; the model explanation and the Monte Carlo
+   experiment sit below as a lab notebook. */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --surface-2: #eaeef2;
+  --ink: #111820;
+  --ink-2: #455060;
+  --muted: #747f8e;
+  --rule: #dce1e7;
+  --axis: #bfc6cf;
+  --accent: #0e6c64;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcefec;
+  --focus: #0e6c64;
+
+  /* credence that B is better: red = leans A, grey = undecided, blue = leans B */
+  --cred-a: #e34948;
+  --cred-mid: #c5c9cf;
+  --cred-b: #2a78d6;
+
+  --good: #0a7d0a;
+  --good-soft: #e1f3e1;
+  --bad: #c23434;
+  --bad-soft: #fbe4e4;
+  --warn: #9a6400;
+  --warn-soft: #fbefd6;
+
+  /* experiment series, fixed per network type */
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+
+  --display: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1115; --surface: #151a20; --surface-2: #1d242c; --ink: #e8ecf1; --ink-2: #b1bac6;
+    --muted: #7d8796; --rule: #27303a; --axis: #3b4550; --accent: #45b8aa; --accent-ink: #062320;
+    --accent-soft: #13302d; --focus: #45b8aa;
+    --cred-a: #e66767; --cred-mid: #4c535c; --cred-b: #3987e5;
+    --good: #2fbf2f; --good-soft: #14301a; --bad: #ef6b6b; --bad-soft: #3a1a1c; --warn: #e3a52a; --warn-soft: #3a2c12;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1115; --surface: #151a20; --surface-2: #1d242c; --ink: #e8ecf1; --ink-2: #b1bac6;
+  --muted: #7d8796; --rule: #27303a; --axis: #3b4550; --accent: #45b8aa; --accent-ink: #062320;
+  --accent-soft: #13302d; --focus: #45b8aa;
+  --cred-a: #e66767; --cred-mid: #4c535c; --cred-b: #3987e5;
+  --good: #2fbf2f; --good-soft: #14301a; --bad: #ef6b6b; --bad-soft: #3a1a1c; --warn: #e3a52a; --warn-soft: #3a2c12;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.55;
+  margin: 0;
+}
+.wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+.num, output, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- masthead */
+.masthead { padding-block: 32px 20px; display: grid; gap: 10px; }
+.crumbs { font-size: 12.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.crumbs a { color: var(--muted); text-decoration: none; }
+.crumbs a:hover { color: var(--accent); }
+.masthead h1 { font-size: clamp(30px, 4.4vw, 44px); letter-spacing: -0.01em; }
+.lede { max-width: 72ch; color: var(--ink-2); font-size: 16.5px; margin: 0; }
+.lede strong { color: var(--ink); font-weight: 600; }
+
+/* --------------------------------------------------------------------- lab */
+.lab { display: grid; grid-template-columns: 284px minmax(0, 1fr); gap: 20px; align-items: start; padding-bottom: 28px; }
+@media (max-width: 960px) { .lab { grid-template-columns: minmax(0, 1fr); } }
+
+.rail {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+}
+@media (max-width: 960px) {
+  .rail { position: static; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .rail .span-all { grid-column: 1 / -1; }
+}
+.group-label { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 2px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.field label, .field .label { font-size: 13.5px; font-weight: 500; color: var(--ink); }
+.field output { font-size: 13px; color: var(--ink-2); }
+.field .hint { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 2px 0; }
+input[type="number"], input[type="text"], select {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--axis);
+  border-radius: 4px;
+  padding: 5px 8px;
+  min-width: 0;
+  width: 100%;
+}
+input[type="number"], input[type="text"].mono { font-family: var(--mono); }
+select { cursor: pointer; }
+
+.btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 5px;
+  border: 1px solid var(--axis);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 7px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: background-color 0.12s, border-color 0.12s;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.small { font-size: 13px; padding: 4px 9px; }
+.btn svg { width: 14px; height: 14px; flex: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 13px; border: 1px solid var(--rule); background: var(--surface-2); color: var(--ink);
+  border-radius: 999px; padding: 4px 11px; cursor: pointer; text-align: left;
+}
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.note { font-size: 12.5px; color: var(--ink-2); min-height: 1.4em; margin: 0; line-height: 1.45; }
+
+/* transport bar */
+.arena { display: grid; gap: 14px; min-width: 0; }
+.transport {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 10px 12px;
+}
+.transport .group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.round-big { font-family: var(--mono); font-size: 14px; color: var(--ink-2); }
+.round-big b { color: var(--ink); font-weight: 500; font-size: 18px; }
+.speed { display: flex; align-items: center; gap: 8px; min-width: 200px; flex: 1 1 200px; max-width: 320px; }
+.speed label { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.speed output { font-size: 12.5px; min-width: 7.5ch; color: var(--ink-2); }
+.kbd-hint { font-size: 12px; color: var(--muted); margin-left: auto; }
+.kbd-hint kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; background: var(--surface-2); }
+@media (max-width: 700px) { .kbd-hint { display: none; } }
+
+/* twin panels */
+.panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .panels { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); display: grid; min-width: 0; grid-row: span 5; grid-template-rows: subgrid; row-gap: 0; }
+.panel-head { align-self: start; }
+.panel-head { display: grid; gap: 8px; padding: 12px 12px 4px; }
+.panel-head .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.panel-head select { width: auto; flex: 1 1 160px; font-weight: 500; }
+.net-params { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.net-params .field { flex: 1 1 140px; }
+.net-blurb { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); white-space: nowrap;
+}
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.correct { background: var(--good-soft); color: var(--good); }
+.pill.incorrect { background: var(--bad-soft); color: var(--bad); }
+.pill.timeout { background: var(--warn-soft); color: var(--warn); }
+.pill.running .dot { animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .pill.running .dot { animation: none; } }
+
+.net-wrap { position: relative; height: clamp(250px, 27vw, 340px); max-width: 100%; margin: 4px 8px 0; }
+.net-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+.readout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.8fr) minmax(0, 1fr); gap: 0; margin: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.readout div { padding: 8px 12px; min-width: 0; }
+.readout div + div { border-left: 1px solid var(--rule); }
+.readout dt { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.readout dd { margin: 0; font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 420px) {
+  .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .readout div:nth-child(3) { border-left: 0; }
+  .readout div:nth-child(n+3) { border-top: 1px solid var(--rule); }
+}
+.traj-wrap { position: relative; height: 190px; margin: 6px 4px 8px; }
+.traj-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+.traj-title { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 12px 0; gap: 8px; flex-wrap: wrap; }
+.traj-title span { font-size: 12.5px; color: var(--ink-2); }
+
+.tooltip {
+  position: absolute; pointer-events: none; z-index: 5; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--axis); border-radius: 5px; padding: 6px 9px; font-size: 12.5px; line-height: 1.4;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12); white-space: nowrap; max-width: 260px;
+}
+.tooltip .t-head { font-weight: 600; }
+.tooltip .t-row { display: flex; gap: 10px; justify-content: space-between; }
+.tooltip .t-row span:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.tooltip .sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+
+/* legend */
+.legend { display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: center; font-size: 12.5px; color: var(--ink-2); padding: 2px 2px 0; }
+.legend .item { display: flex; align-items: center; gap: 8px; }
+.legend .item.scale { display: grid; gap: 3px; }
+.scale-bar { width: 200px; max-width: 46vw; height: 9px; border-radius: 5px; background: linear-gradient(90deg, var(--cred-a), var(--cred-mid), var(--cred-b)); }
+.scale-ticks { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); width: 200px; max-width: 46vw; }
+.glyph { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.glyph.filled { background: var(--cred-b); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--cred-b); }
+.glyph.hollow { border: 2.5px solid var(--cred-a); background: var(--surface); }
+.glyph.spark { width: 6px; height: 6px; background: var(--cred-b); box-shadow: -9px 0 0 -1px var(--cred-b), -16px 0 0 -2px var(--cred-b); margin-left: 16px; }
+
+/* ------------------------------------------------------------------ prose */
+.section { padding-block: 36px; border-top: 1px solid var(--rule); }
+.section-head { display: grid; gap: 8px; margin-bottom: 20px; max-width: 76ch; }
+.section-head h2 { font-size: clamp(24px, 3vw, 30px); }
+.section-head p { margin: 0; color: var(--ink-2); }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+
+.model-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+@media (max-width: 900px) { .model-grid { grid-template-columns: minmax(0, 1fr); } }
+.prose { max-width: 68ch; }
+.prose p { margin: 0 0 12px; }
+.prose h3 { font-size: 19px; margin: 22px 0 8px; }
+.prose h3:first-child { margin-top: 0; }
+.steps { list-style: none; counter-reset: s; padding: 0; margin: 0 0 16px; display: grid; gap: 12px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; }
+.steps li::before {
+  content: counter(s); font-family: var(--mono); font-size: 13px; color: var(--accent); border: 1px solid var(--accent);
+  border-radius: 50%; width: 24px; height: 24px; display: grid; place-items: center; margin-top: 1px;
+}
+.steps b { font-weight: 600; }
+.formula {
+  font-family: var(--mono); font-size: 14px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r);
+  padding: 12px 14px; overflow-x: auto; white-space: nowrap; margin: 0 0 12px;
+}
+.formula .k { color: var(--accent); }
+.aside-card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 18px; display: grid; gap: 10px; }
+.aside-card h3 { font-size: 17px; }
+.aside-card p, .aside-card li { font-size: 14px; color: var(--ink-2); margin: 0; }
+.aside-card ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.param-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.param-table td { padding: 6px 0; border-top: 1px solid var(--rule); vertical-align: top; }
+.param-table td:first-child { font-family: var(--mono); color: var(--accent); width: 56px; }
+
+/* ------------------------------------------------------------ experiments */
+.exp-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 16px; }
+.exp-controls .span-all { grid-column: 1 / -1; }
+.net-checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.net-check { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 11px 4px 8px; cursor: pointer; background: var(--surface-2); user-select: none; }
+.net-check input { margin: 0; accent-color: var(--accent); }
+.net-check .sw { width: 10px; height: 10px; border-radius: 50%; }
+.run-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.progress { flex: 1 1 200px; display: grid; gap: 4px; min-width: 0; }
+.progress-track { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.15s; }
+.progress-text { font-size: 12.5px; color: var(--ink-2); }
+.source-tag { font-size: 12px; color: var(--muted); }
+
+.exp-out { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+@media (max-width: 860px) { .exp-out { grid-template-columns: minmax(0, 1fr); } }
+.chart-card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 14px 14px 8px; min-width: 0; display: grid; gap: 6px; }
+.chart-card h3 { font-family: var(--body); font-size: 15px; font-weight: 600; }
+.chart-card .sub { font-size: 12.5px; color: var(--ink-2); margin: 0; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend i { width: 14px; height: 2px; border-radius: 1px; display: inline-block; position: relative; }
+.chart-legend i::after { content: ""; position: absolute; left: 3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: inherit; }
+.chart-box { position: relative; min-width: 0; }
+.chart-box svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.effect-strip { margin-top: 14px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 14px; display: grid; gap: 8px; }
+.table-scroll { overflow-x: auto; }
+table.results { border-collapse: collapse; font-size: 13px; width: 100%; min-width: 520px; }
+table.results th, table.results td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+table.results th { font-weight: 600; font-size: 12px; color: var(--ink-2); vertical-align: bottom; }
+table.results th:first-child, table.results td:first-child { text-align: left; }
+table.results td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+table.results td .r { color: var(--muted); font-size: 11.5px; margin-left: 6px; }
+table.results td.pos { color: var(--good); }
+table.results td.neg { color: var(--bad); }
+.th-sw { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+
+.refs { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; max-width: 90ch; }
+.refs li { font-size: 14px; color: var(--ink-2); padding-left: 14px; border-left: 2px solid var(--rule); }
+.refs li b { color: var(--ink); font-weight: 600; }
+.refs .why { display: block; font-size: 13px; color: var(--muted); }
+footer { padding-block: 24px 40px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Network epistemology testbed</a><span aria-hidden="true">/</span><span>Model 1 · Two-armed bandit</span></nav>
+    <h1>The Zollman Effect</h1>
+    <p class="lede">A community of scientists is testing a new treatment, <strong>B</strong>, that is in fact slightly better than the standard one, <strong>A</strong>. Each scientist only tries B if they currently think it is better, and everyone learns from the results of the colleagues they are connected to. Zollman (2007) found that communities which share <em>less</em> are more likely to end up right. Run the two networks below on identical evidence and watch how that happens.</p>
+  </header>
+
+  <section class="lab" aria-label="Simulation">
+    <aside class="rail" aria-label="Model parameters">
+      <div class="field span-all">
+        <p class="group-label">Scenarios</p>
+        <div class="chips" id="scenarios">
+          <button class="chip" type="button" data-scenario="zollman">Zollman’s setup</button>
+          <button class="chip" type="button" data-scenario="hard">Few trials per round</button>
+          <button class="chip" type="button" data-scenario="easy">Clearly better B</button>
+          <button class="chip" type="button" data-scenario="sceptics">Sceptical start</button>
+          <button class="chip" type="button" data-scenario="big">Large community</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-top"><label for="in-N">Agents</label><output id="out-N" for="in-N">10</output></div>
+        <input type="range" id="in-N" min="3" max="100" step="1" value="10">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-eps">Advantage of B, ε</label><output id="out-eps" for="in-eps">0.001</output></div>
+        <input type="range" id="in-eps" min="0" max="8" step="1" value="0">
+        <span class="hint" id="hint-eps">B succeeds 50.1% of the time; agents can’t rule out 49.9%.</span>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-n">Trials per round, n</label><output id="out-n" for="in-n">1000</output></div>
+        <input type="range" id="in-n" min="0" max="12" step="1" value="9">
+      </div>
+      <div class="field">
+        <span class="label">Starting credence in B</span>
+        <div class="pair">
+          <div class="field"><div class="field-top"><label for="in-lo" class="hint">from</label><output id="out-lo" for="in-lo">0.00</output></div><input type="range" id="in-lo" min="0" max="1" step="0.05" value="0"></div>
+          <div class="field"><div class="field-top"><label for="in-hi" class="hint">to</label><output id="out-hi" for="in-hi">1.00</output></div><input type="range" id="in-hi" min="0" max="1" step="0.05" value="1"></div>
+        </div>
+        <span class="hint">Each agent’s prior is drawn uniformly from this range.</span>
+      </div>
+      <div class="field">
+        <label for="in-seed">Random seed</label>
+        <div style="display:flex; gap:6px">
+          <input type="number" id="in-seed" min="0" step="1" value="4">
+          <button class="btn small" type="button" id="btn-reseed" title="Pick a new random seed">New</button>
+        </div>
+        <span class="hint">Same seed, same priors and same coin flips in both panels.</span>
+      </div>
+      <div class="field span-all">
+        <button class="btn" type="button" id="btn-find">Find a seed where they disagree</button>
+        <p class="note" id="find-note" aria-live="polite">Seed 4 is one where they disagree. For most seeds the two networks reach the same verdict.</p>
+      </div>
+      <div class="field">
+        <span class="label">Belief chart scale</span>
+        <div class="chips" role="group" aria-label="Belief chart scale">
+          <button class="chip" type="button" data-scale="credence" aria-pressed="true">Credence</button>
+          <button class="chip" type="button" data-scale="logodds" aria-pressed="false">Log-odds</button>
+        </div>
+      </div>
+      <label class="field" style="grid-template-columns:auto 1fr; align-items:center; gap:8px">
+        <input type="checkbox" id="in-anim" checked style="accent-color:var(--accent)">
+        <span class="label" style="font-size:13.5px">Show results travelling along links (up to 15 rounds/s)</span>
+      </label>
+    </aside>
+
+    <div class="arena">
+      <div class="transport" role="toolbar" aria-label="Playback">
+        <div class="group">
+          <button class="btn primary" type="button" id="btn-play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Play</span></button>
+          <button class="btn" type="button" id="btn-step">Step</button>
+          <button class="btn" type="button" id="btn-reset">Restart</button>
+        </div>
+        <div class="speed">
+          <label for="in-speed">Speed</label>
+          <input type="range" id="in-speed" min="0" max="7" step="1" value="3">
+          <output id="out-speed" for="in-speed">8 / s</output>
+        </div>
+        <div class="round-big">Round <b id="round">0</b></div>
+        <span class="kbd-hint"><kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>R</kbd> restart</span>
+      </div>
+
+      <div class="panels">
+        <article class="panel" id="panel-a" aria-label="Network A">
+          <div class="panel-head">
+            <div class="row">
+              <select id="net-a" aria-label="Network A structure"></select>
+              <span class="pill running" id="status-a" aria-live="polite"><span class="dot"></span><span>Running</span></span>
+            </div>
+            <p class="net-blurb" id="blurb-a"></p>
+            <div class="net-params" id="params-a"></div>
+          </div>
+          <div class="net-wrap"><canvas id="graph-a" aria-label="Network A diagram"></canvas></div>
+          <dl class="readout">
+            <div><dt>Testing B</dt><dd id="testing-a">–</dd></div>
+            <div><dt>Mean credence</dt><dd id="mean-a">–</dd></div>
+            <div><dt>Links</dt><dd id="links-a">–</dd></div>
+            <div><dt>Settled</dt><dd id="settled-a">–</dd></div>
+          </dl>
+          <div class="traj-title"><span>Each line is one agent’s credence that B is better</span></div>
+          <div class="traj-wrap"><canvas id="traj-a" aria-label="Network A belief trajectories"></canvas></div>
+        </article>
+
+        <article class="panel" id="panel-b" aria-label="Network B">
+          <div class="panel-head">
+            <div class="row">
+              <select id="net-b" aria-label="Network B structure"></select>
+              <span class="pill running" id="status-b" aria-live="polite"><span class="dot"></span><span>Running</span></span>
+            </div>
+            <p class="net-blurb" id="blurb-b"></p>
+            <div class="net-params" id="params-b"></div>
+          </div>
+          <div class="net-wrap"><canvas id="graph-b" aria-label="Network B diagram"></canvas></div>
+          <dl class="readout">
+            <div><dt>Testing B</dt><dd id="testing-b">–</dd></div>
+            <div><dt>Mean credence</dt><dd id="mean-b">–</dd></div>
+            <div><dt>Links</dt><dd id="links-b">–</dd></div>
+            <div><dt>Settled</dt><dd id="settled-b">–</dd></div>
+          </dl>
+          <div class="traj-title"><span>Each line is one agent’s credence that B is better</span></div>
+          <div class="traj-wrap"><canvas id="traj-b" aria-label="Network B belief trajectories"></canvas></div>
+        </article>
+      </div>
+
+      <div class="legend" aria-label="Legend">
+        <div class="item scale">
+          <div class="scale-bar"></div>
+          <div class="scale-ticks"><span>0 · A is better</span><span>0.5</span><span>1 · B</span></div>
+        </div>
+        <div class="item"><span class="glyph filled"></span>Tests B this round</div>
+        <div class="item"><span class="glyph hollow"></span>Sticks with A (learns nothing new)</div>
+        <div class="item"><span class="glyph spark"></span>A result in transit; blue favours B, red favours A</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="model" aria-labelledby="model-h">
+    <div class="section-head">
+      <span class="eyebrow">The model</span>
+      <h2 id="model-h">What each agent does, every round</h2>
+      <p>This is the Bala–Goyal bandit model as used by Zollman (2007) and by Rosenstock, Bruner and O’Connor (2017). It is deliberately minimal: the only things that differ between the two panels above are who talks to whom.</p>
+    </div>
+    <div class="model-grid">
+      <div class="prose">
+        <ol class="steps">
+          <li><div><b>Hold a belief.</b> Each agent has a credence <i>c</i> that B is the better action, meaning that B’s success rate is 0.5 + ε rather than 0.5 − ε. A’s success rate, 0.5, is known to everyone.</div></li>
+          <li><div><b>Act on it.</b> If <i>c</i> &gt; 0.5 the agent tries B <i>n</i> times and records <i>k</i> successes. Otherwise it does A, which produces no new information, because A’s rate is already known.</div></li>
+          <li><div><b>Share.</b> Every result is seen by the agent who produced it and by that agent’s neighbours in the network, and by no one else.</div></li>
+          <li><div><b>Update.</b> Each agent applies Bayes’ rule to all the results it saw this round. Then the next round begins.</div></li>
+        </ol>
+        <p>Because there are only two hypotheses, Bayes’ rule becomes simple addition in log-odds. One batch of <i>k</i> successes in <i>n</i> trials of B moves an agent’s belief by</p>
+        <div class="formula">logit(c′) = logit(c) + (2k − n) · ln( (0.5 + ε) / (0.5 − ε) )</div>
+        <p>So only the surplus of successes over failures matters, and with ε = 0.001 a run of 1,000 trials that comes out 497 to 503 moves everyone who sees it towards A.</p>
+
+        <h3>When does a run end?</h3>
+        <p>If every agent’s credence drops to 0.5 or below, nobody tests B again, no new evidence ever arrives, and the community is stuck on the worse action for good. That is the <b>wrong consensus</b>. If every agent rises above 0.99, the run is scored as a <b>right consensus</b>, since a reversal from there is very unlikely. A run that has done neither by round 10,000 is reported as unsettled.</p>
+
+        <h3>Why sparse networks can win</h3>
+        <p>Early on, a few unlucky batches of B results are likely somewhere in the community. In a complete network every agent sees all of them at once, so a single bad round can push everyone below 0.5 together, and then nobody is left to gather the evidence that would correct the mistake. In a cycle, the same bad luck reaches only a few agents. Others keep testing B, their good results spread slowly around the ring, and the doubters are eventually won back. The price is speed: sparse networks take far longer to settle.</p>
+        <p>Rosenstock, Bruner and O’Connor showed that this advantage is real but confined to hard problems: small ε, small <i>n</i> and small communities. Try the scenarios on the left, then measure it properly in the experiment below.</p>
+      </div>
+      <div class="aside-card">
+        <h3>Parameters</h3>
+        <table class="param-table">
+          <tr><td>N</td><td>Number of agents in the community.</td></tr>
+          <tr><td>ε</td><td>How much better B is than A. B succeeds with probability 0.5 + ε; agents consider 0.5 − ε equally possible. Zollman used ε = 0.001.</td></tr>
+          <tr><td>n</td><td>Trials each B-tester runs per round. Smaller batches are noisier, so misleading runs of bad luck are more common. Zollman used n = 1,000.</td></tr>
+          <tr><td>priors</td><td>Starting credences, drawn uniformly from the range you set. The standard choice is the whole interval from 0 to 1.</td></tr>
+        </table>
+        <h3>Things to try</h3>
+        <ul>
+          <li>Keep seed 4 and switch panel B from Cycle to Wheel, then Star. Does one well-connected hub behave like a complete network?</li>
+          <li>Press <b>Find a seed where they disagree</b> a few times. Is it always the complete network that gets it wrong?</li>
+          <li>Raise ε to 0.02. How hard is it now to find a disagreement?</li>
+          <li>Try Clusters: tight groups with weak bridges. Each clique can lock in on its own.</li>
+          <li>Hover any agent to follow the same person in both networks.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="experiment" aria-labelledby="exp-h">
+    <div class="section-head">
+      <span class="eyebrow">Monte Carlo experiment</span>
+      <h2 id="exp-h">How often does each network get it right?</h2>
+      <p>A single run is a coin flip. To measure the effect, run thousands of independent communities, each with fresh priors drawn uniformly from 0 to 1, and count how many reach the right consensus. The simulations run in your browser.</p>
+    </div>
+
+    <div class="exp-controls">
+      <div class="field span-all">
+        <p class="group-label">Presets (after Rosenstock, Bruner &amp; O’Connor 2017)</p>
+        <div class="chips" id="exp-presets">
+          <button class="chip" type="button" data-preset="zollman">Zollman’s comparison: N = 3 to 10</button>
+          <button class="chip" type="button" data-preset="eps">Effect vs. how much better B is</button>
+          <button class="chip" type="button" data-preset="trials">Effect vs. trials per round</button>
+          <button class="chip" type="button" data-preset="size">Effect in large communities</button>
+        </div>
+      </div>
+      <div class="field span-all">
+        <p class="group-label">Networks to compare</p>
+        <div class="net-checks" id="exp-nets"></div>
+      </div>
+      <div class="field">
+        <label for="exp-vary">Vary</label>
+        <select id="exp-vary">
+          <option value="N">Number of agents, N</option>
+          <option value="eps">Advantage of B, ε</option>
+          <option value="n">Trials per round, n</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="exp-values">Values to try</label>
+        <input type="text" class="mono" id="exp-values" value="3, 4, 5, 6, 7, 8, 9, 10">
+        <span class="hint" id="exp-values-hint">Separate with commas.</span>
+      </div>
+      <div class="field">
+        <span class="label">Hold the others at</span>
+        <div class="pair" style="grid-template-columns: repeat(3, minmax(0,1fr))">
+          <div class="field"><label class="hint" for="exp-N">N</label><input type="number" id="exp-N" min="2" max="300" step="1" value="10"></div>
+          <div class="field"><label class="hint" for="exp-eps">ε</label><input type="number" id="exp-eps" min="0.0001" max="0.49" step="0.001" value="0.001"></div>
+          <div class="field"><label class="hint" for="exp-n">n</label><input type="number" id="exp-n" min="1" max="100000" step="1" value="1000"></div>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">Runs per setting, round cap</span>
+        <div class="pair">
+          <input type="number" id="exp-runs" min="10" max="100000" step="10" value="1000" aria-label="Runs per setting">
+          <input type="number" id="exp-cap" min="10" max="100000" step="100" value="10000" aria-label="Round cap">
+        </div>
+      </div>
+      <div class="run-row span-all">
+        <button class="btn primary" type="button" id="exp-run">Run experiment</button>
+        <div class="progress">
+          <div class="progress-track"><div class="progress-fill" id="exp-fill"></div></div>
+          <span class="progress-text" id="exp-progress" aria-live="polite"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="exp-out">
+      <div class="chart-card">
+        <h3>Share of runs reaching the right consensus</h3>
+        <p class="sub">Shaded bands are 95% intervals. Higher is better.</p>
+        <div class="chart-legend" id="legend-p"></div>
+        <div class="chart-box" id="chart-p"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Rounds needed to reach it</h3>
+        <p class="sub">Mean over runs that reached the right consensus. Log scale.</p>
+        <div class="chart-legend" id="legend-t"></div>
+        <div class="chart-box" id="chart-t"></div>
+      </div>
+    </div>
+    <div class="effect-strip">
+      <div class="field-top"><h3 style="font-family:var(--body); font-size:15px">Results table</h3><span class="source-tag" id="exp-source"></span></div>
+      <div class="table-scroll"><table class="results" id="exp-table"></table></div>
+    </div>
+  </section>
+
+  <section class="section" id="reading" aria-labelledby="read-h">
+    <div class="section-head">
+      <span class="eyebrow">Sources</span>
+      <h2 id="read-h">Where this comes from</h2>
+    </div>
+    <ul class="refs">
+      <li><b>Bala, V. &amp; Goyal, S. (1998). Learning from neighbours.</b> <i>Review of Economic Studies</i> 65(3). <span class="why">The original bandit-on-a-network model that this page implements.</span></li>
+      <li><b>Zollman, K. J. S. (2007). The communication structure of epistemic communities.</b> <i>Philosophy of Science</i> 74(5). <span class="why">Introduces the effect with cycle, wheel and complete networks of 3 to 10 agents, ε = 0.001, n = 1,000.</span></li>
+      <li><b>Zollman, K. J. S. (2010). The epistemic benefit of transient diversity.</b> <i>Erkenntnis</i> 72. <span class="why">Same result with beta-distributed beliefs, and the idea that diversity of belief only needs to last a while.</span></li>
+      <li><b>Rosenstock, S., Bruner, J. &amp; O’Connor, C. (2017). <a href="https://philsci-archive.pitt.edu/11900/">In epistemic networks, is less really more?</a></b> <i>Philosophy of Science</i> 84(2). <span class="why">The robustness study behind the experiment presets. Reports, for example, 99.12% vs. 100% correct and 20 vs. 1,977 rounds for complete vs. cycle at N = 100.</span></li>
+      <li><b>O’Connor, C. &amp; Weatherall, J. O. (2018). <a href="https://arxiv.org/abs/1712.04561">Scientific polarization.</a></b> <i>European Journal for Philosophy of Science</i> 8. <span class="why">Same bandit, but agents discount evidence from people who disagree with them. A natural next model for this testbed.</span></li>
+      <li><b>Weisberg, J. (2020). <a href="https://jonathanweisberg.org/post/zollman/">The Zollman effect</a>, <a href="https://jonathanweisberg.org/post/rbo">How robust is the Zollman effect?</a>, <a href="https://jonathanweisberg.org/post/ow/">Mistrust &amp; polarization</a>.</b> <span class="why">A clear blog walkthrough of these three papers, with code. The test suite here checks against its figures: .89 (complete) and .97 (cycle) at N = 10.</span></li>
+    </ul>
+  </section>
+
+  <footer>Built for the network epistemology testbed. Results draw on seeded random numbers, so a seed always replays the same run. Batches of n ≥ 60 trials use a normal approximation to the binomial.</footer>
+</div>
+
+<script src="lib/rng.js"></script>
+<script src="lib/networks.js"></script>
+<script src="models/zollman.js"></script>
+<script src="lib/charts.js"></script>
+<script src="data/zollman-presets.js"></script>
+<script src="app/zollman-app.js"></script>
+</body>
+</html>
