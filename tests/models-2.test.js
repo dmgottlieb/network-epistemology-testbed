@@ -129,3 +129,18 @@ test('trust urn samples in proportion to weights', () => {
   for (let i = 0; i < 20000; i++) counts[u.sample(rand())]++;
   assert.ok(Math.abs(counts[2] / 20000 - 0.7) < 0.02 && Math.abs(counts[0] / 20000 - 0.1) < 0.01);
 });
+
+// Holman & Bruner: at bias .08 a static wheel almost never uses the better
+// drug in the last 1,000 of 2,000 rounds; with learned trust, most of the time.
+test('biased agent: static wheel captured, dynamic trust resists', () => {
+  const HB = require('../models/biased.js');
+  const mean = (network) => {
+    const rand = rng.mulberry32(17);
+    let s = 0;
+    for (let r = 0; r < 40; r++) s += HB.simulate({ N: 1000, bias: 0.08, network }, rand);
+    return s / 40;
+  };
+  const stat = mean('wheel'), dyn = mean('dynamic');
+  console.log(`  static wheel ${stat.toFixed(3)}  dynamic ${dyn.toFixed(3)}`);
+  assert.ok(stat < 0.05 && dyn > 0.7);
+});

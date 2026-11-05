@@ -77,6 +77,18 @@ PAGES.trust = {
   },
 };
 const TR = require('../models/trust.js');
+PAGES.biased = {
+  fn: EX.biased,
+  base: { D: 6, N: 5000, gap: 0.01, bias: 0.03, network: 'static', links: 0, rounds: 2000 },
+  presets: {
+    fig2: { title: 'More links, less damage (Fig. 2)', metric: 'better', vary: 'links', xs: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], seriesBy: 'N', series: [1000, 5000], fixed: {}, runs: R('HB_RUNS', 300),
+      note: 'Static network, company linked to all six doctors, bias 0.03. 0 extra links is the wheel, 9 the complete network. The paper reports 42% (wheel) and 63% (complete) but not the number of patients; 5,000 a round reproduces it.' },
+    fig3: { title: 'Learning whom to trust (Fig. 3)', metric: 'better', vary: 'bias', xs: [0, 0.01, 0.02, 0.03, 0.05, 0.08, 0.1, 0.12, 0.15], seriesBy: 'N', series: [50, 100, 250, 500], fixed: { network: 'dynamic' }, runs: R('HB_RUNS', 300),
+      note: 'Dynamic network. Bigger studies help; so, past a point, does a bigger bias, because it becomes easy to spot.' },
+    contrast: { title: 'Static vs. dynamic', metric: 'better', vary: 'bias', xs: [0, 0.01, 0.02, 0.03, 0.05, 0.08, 0.1, 0.15], seriesBy: 'network', series: ['static', 'dynamic'], fixed: { N: 1000 }, runs: R('HB_RUNS', 300),
+      note: '1,000 patients a round, static wheel vs. dynamic trust. The paper: with bias 0.08, the static network almost never uses the better drug; the dynamic one 80% of the time.' },
+  },
+};
 
 const only = process.argv[2];
 const onlyPreset = process.argv[3];

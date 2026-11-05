@@ -13,6 +13,7 @@
   const BB = isNode ? require('./beta-bandit.js') : root.NET.betaBandit;
   const PR = isNode ? require('./propaganda.js') : root.NET.propaganda;
   const TR = isNode ? require('./trust.js') : root.NET.trust;
+  const HB = isNode ? require('./biased.js') : root.NET.biased;
 
   function graphFor(type, N, cache, rand, params) {
     const def = NETS.TYPES[type];
@@ -61,7 +62,14 @@
     return { last: k[k.length - 1], mean: k.reduce((a, b) => a + b, 0) / k.length, first: k[0] };
   }
 
-  const api = { diversity, conformity, propaganda, trust, graphFor };
+  // Holman & Bruner: share of doctor-rounds on the better drug, last half
+  function biased(p, rand) {
+    const maxLinks = (p.D * (p.D - 1)) / 2 - p.D;
+    const network = p.network === 'dynamic' ? 'dynamic' : p.links >= maxLinks ? 'complete' : 'extra';
+    return { better: HB.simulate({ D: p.D, N: p.N, pA: 0.5 + p.gap, pB: 0.5, bias: p.bias, network, extraLinks: p.links, rounds: p.rounds }, rand) };
+  }
+
+  const api = { diversity, conformity, propaganda, trust, biased, graphFor };
   if (isNode) module.exports = api;
   else {
     root.NET = root.NET || {};

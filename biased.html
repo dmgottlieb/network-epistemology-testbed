@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Intransigently Biased Agents</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Holman and Bruner's model of a biased pharmaceutical company inside a network of doctors, and doctors who learn whom to trust.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/lab.css">
+<style>.panels .panel { grid-row: span 7; } .glyph.diamond { border-radius: 2px; transform: rotate(45deg) scale(0.8); background: var(--bad); }</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Network epistemology testbed</a><span aria-hidden="true">/</span><span>Model 8 · Biased agents</span></nav>
+    <h1>Intransigently Biased Agents</h1>
+    <p class="lede">From 1947 into the 1970s, US doctors prescribed DES to prevent miscarriage. Randomised trials had shown it did not work by 1954, and the drug was dangerous. Holman and Bruner (2015) model the doctors and a drug company that keeps reporting favourable results for its product, whatever the evidence. Unlike the propagandist in <a href="propaganda.html">the Tobacco Strategy</a>, this agent sits <strong>inside</strong> the scientific network and talks to every doctor. Both panels share the same priors and luck; only how the doctors are connected differs.</p>
+  </header>
+
+  <section class="lab" aria-label="Simulation">
+    <aside class="rail" aria-label="Parameters">
+      <div class="field span-all">
+        <p class="group-label">Scenarios</p>
+        <div class="chips" id="scenarios">
+          <button class="chip" type="button" data-scenario="trust">Static vs. learned trust</button>
+          <button class="chip" type="button" data-scenario="links">More links help</button>
+          <button class="chip" type="button" data-scenario="subtle">Subtle bias</button>
+        </div>
+        <p class="note" id="note" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-bias">Company’s bias, b</label><output id="out-bias" for="in-bias"></output></div>
+        <input type="range" id="in-bias" min="0" max="7" step="1">
+        <span class="hint" id="hint-bias"></span>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-N">Patients per round, N</label><output id="out-N" for="in-N"></output></div>
+        <input type="range" id="in-N" min="0" max="5" step="1">
+      </div>
+      <div class="field">
+        <label for="in-seed">Random seed</label>
+        <div style="display:flex; gap:6px">
+          <input type="number" id="in-seed" min="0" step="1" value="1">
+          <button class="btn small" type="button" id="btn-reseed">New</button>
+        </div>
+        <span class="hint">Six doctors, 2,000 rounds; the paper scores the last 1,000.</span>
+      </div>
+    </aside>
+    <div class="arena">
+      <div class="transport" role="toolbar" aria-label="Playback">
+        <div class="group">
+          <button class="btn primary" type="button" id="btn-play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Play</span></button>
+          <button class="btn" type="button" id="btn-step">Step</button>
+          <button class="btn" type="button" id="btn-reset">Restart</button>
+        </div>
+        <div class="speed">
+          <label for="in-speed">Speed</label>
+          <input type="range" id="in-speed" min="0" max="6" step="1">
+          <output id="out-speed" for="in-speed"></output>
+        </div>
+        <div class="round-big">Round <b id="round">0</b></div>
+        <span class="kbd-hint"><kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>R</kbd> restart</span>
+      </div>
+      <div class="panels" id="panels"></div>
+      <div class="legend" aria-label="Legend">
+        <div class="item scale">
+          <div class="scale-bar"></div>
+          <div class="scale-ticks"><span>0 · company’s drug</span><span></span><span>1 · better drug</span></div>
+        </div>
+        <div class="item"><span class="glyph filled"></span>Prescribing the better drug</div>
+        <div class="item"><span class="glyph hollow"></span>Prescribing the company’s drug</div>
+        <div class="item"><span class="glyph diamond"></span>The company</div>
+        <div class="item"><span class="edge-key anti"></span>Company’s influence (fainter = less trusted)</div>
+        <div class="item"><span class="edge-key"></span>Doctor-to-doctor trust</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="model-h">
+    <div class="section-head">
+      <span class="eyebrow">The model</span>
+      <h2 id="model-h">A biased agent that never changes its mind</h2>
+      <p>The doctors are Zollman’s 2010 agents (see <a href="diversity.html">Transient Diversity</a>): beta beliefs about two drugs, both of unknown efficacy. Each round, each doctor gives the drug it thinks better to N patients and shares the results. The better drug works 51% of the time; the company’s works 50%.</p>
+    </div>
+    <div class="model-grid">
+      <div class="prose">
+        <h3>The intransigent agent</h3>
+        <p>The company only ever prescribes its own drug. Its reports are drawn as if that drug worked 50% + b of the time. The data are biased in ways that are hard to see from any single study, and it never updates on anyone else’s.</p>
+        <h3>Why sustained truth is impossible in a static network</h3>
+        <p>Suppose every doctor has settled on the better drug. Now the only information anyone gets about the company’s drug comes from the company, so every doctor’s estimate of it creeps up. Eventually one crosses over and starts prescribing it. That doctor’s honest results expose the bias, and the doctor and its neighbours swing back. Then the cycle repeats. The community can never rest on the truth, because only constant debunking keeps the company at bay. Holman and Bruner call this the need for “eternal vigilance”.</p>
+        <p>So, <b>more links help</b>, the reverse of the Zollman effect. Every doctor who tests the company’s drug debunks it for everyone it talks to. Sparse networks make each corner of the community repeat that work on its own.</p>
+        <h3>Choosing whom to trust</h3>
+        <p>In the dynamic version, each doctor keeps a bin of balls for every other doctor, itself and the company, and weighs each source’s results by its share of the balls. Each time a source reports, the doctor runs a one-sample t-test of the report against what it expects. A plausible result (|t| &lt; 1.96) adds balls; an implausible one removes them:</p>
+        <div class="formula">b<sub>ij</sub> ← b<sub>ij</sub> + L · (1.96 − |t<sub>ij</sub>|)</div>
+        <p>A strongly biased company gets caught: its results keep failing the test, its weight drains away, and the doctors settle on the better drug. A subtly biased one can stay trusted, especially by a doctor whose beliefs the company helped form. So, past a point, <b>more bias is less effective</b>, and bigger studies help because they make bias easier to detect.</p>
+      </div>
+      <div class="aside-card">
+        <h3>Choices made here</h3>
+        <ul>
+          <li>Priors α, β uniform on [0, 4] for both drugs, as in Zollman (2010); the paper says only that beliefs are random.</li>
+          <li>The t-test uses the sample standard deviation of the N results; L = 1. Bins cannot go below zero, and start uniform on [0, 100].</li>
+          <li>In the dynamic network each doctor weighs everyone, its own results included, by trust. Static networks count every result in full.</li>
+          <li>The paper gives no N for its Fig. 2. With N = 5,000 we get its 42% (wheel) and 63% (complete).</li>
+        </ul>
+        <h3>Compared with nearby models</h3>
+        <p>Unlike <a href="polarization.html">polarization</a>, trust here tracks how plausible a source’s data are, not how much the source agrees with you. Like <a href="trust.html">Learning Whom to Trust</a>, the network is learned, but with a statistical test instead of being told the truth.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="exp-h">
+    <div class="section-head">
+      <span class="eyebrow">Monte Carlo experiment</span>
+      <h2 id="exp-h">How often is the better drug prescribed?</h2>
+      <p>The share of doctor-rounds on the better drug over the last 1,000 of 2,000 rounds, as in the paper.</p>
+    </div>
+    <div id="exp"></div>
+  </section>
+
+  <section class="section" aria-labelledby="read-h">
+    <div class="section-head">
+      <span class="eyebrow">Sources and checks</span>
+      <h2 id="read-h">Where this comes from</h2>
+    </div>
+    <ul class="refs">
+      <li><b>Holman, B. &amp; Bruner, J. P. (2015). The problem of intransigently biased agents.</b> <i>Philosophy of Science</i> 82(5): 956–968. <span class="why">The biased agent, the static networks of Fig. 2, the trust rule above, and Fig. 3.</span></li>
+      <li><b>Dutton, D. (1988). <i>Worse than the Disease</i>.</b> <span class="why">The DES history the paper draws on.</span></li>
+      <li><b>Checks.</b> <span class="why">Static network, bias 0.03: better drug 43% (wheel) and 61% (complete) at N = 5,000, against 42% and 63% in the paper. At bias 0.08 and N = 1,000 the static wheel almost never prescribes it and the dynamic network does about 85% of the time; the paper reports “almost never” and 80%.</span></li>
+    </ul>
+  </section>
+  <footer>Part of the network epistemology testbed. Batches of 60 or more patients use a normal approximation to the binomial.</footer>
+</div>
+<script src="lib/rng.js"></script>
+<script src="lib/networks.js"></script>
+<script src="lib/charts.js"></script>
+<script src="lib/views.js"></script>
+<script src="lib/lab.js"></script>
+<script src="lib/sweep.js"></script>
+<script src="lib/experiment-ui.js"></script>
+<script src="models/zollman.js"></script>
+<script src="models/beta-bandit.js"></script>
+<script src="models/propaganda.js"></script>
+<script src="models/trust.js"></script>
+<script src="models/biased.js"></script>
+<script src="models/experiments.js"></script>
+<script src="data/biased-presets.js"></script>
+<script src="app/biased-app.js"></script>
+<script>
+(function () {
+  const { experimentUI: XUI, experiments: EX, sweep: SW } = window.NET;
+  const f2 = (v) => (v == null ? '–' : v.toFixed(2));
+  XUI.mount(document.getElementById('exp'), {
+    variables: {
+      bias: { name: 'b', label: 'Company’s bias, b', kind: 'num', min: 0, max: 0.49, defaults: '0, 0.02, 0.05, 0.08, 0.15' },
+      N: { name: 'N', label: 'Patients per round, N', kind: 'int', min: 2, max: 100000, log: true, defaults: '50, 100, 250, 500, 1000' },
+      links: { name: 'extra links', label: 'Extra doctor-doctor links (static)', kind: 'int', min: 0, max: 100, defaults: '0, 3, 6, 9' },
+      network: { name: 'network', label: 'Network', kind: 'enum', options: [['static', 'Static'], ['dynamic', 'Dynamic (learned trust)']], defaults: 'static, dynamic' },
+      gap: { name: 'gap', label: 'How much better the better drug is', kind: 'num', min: 0.001, max: 0.4, log: true, defaults: '0.005, 0.01, 0.02, 0.05' },
+      D: { name: 'doctors', label: 'Doctors', kind: 'int', min: 3, max: 20, defaults: '4, 6, 10' },
+      rounds: { name: 'rounds', label: 'Rounds (scored on the second half)', kind: 'int', min: 10, max: 20000, defaults: '500, 2000' },
+    },
+    varyKeys: ['bias', 'N', 'links', 'gap', 'D', 'rounds', 'network'],
+    seriesKeys: ['network', 'N', 'bias', 'links', 'D'],
+    fixed: { bias: 0.03, N: 1000, links: 0, network: 'static', gap: 0.01, D: 6, rounds: 2000 },
+    metrics: { better: { label: 'Share of late rounds on the better drug', sub: 'Doctor-rounds over the last half of each run.', value: (a) => SW.mean(a, 'better'), domain: [0, 1], fmt: f2 } },
+    defaultMetric: 'better', runs: 60, runOne: EX.biased,
+    tableHead: 'better drug, late rounds', tableCell: (a) => f2(SW.mean(a, 'better')),
+    presets: window.NET.biasedPresets || {}, defaultPreset: 'fig2',
+  });
+})();
+</script>
+</body>
+</html>

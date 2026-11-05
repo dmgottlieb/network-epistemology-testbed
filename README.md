@@ -140,6 +140,17 @@ matches Pozzi's stable-network results within about 0.02 (e.g. credulous,
 V = 0: 0.64 / 0.26 for 5 / 100 agents vs. 0.64 / 0.24). Turnover is applied
 once per problem; per round, every community collapses.
 
+### 8. Intransigently biased agents (`biased.html`)
+
+Holman & Bruner (2015). Six Zollman-2010 doctors and a drug company that only
+prescribes its own drug and reports Binomial(N, pB + b) results. Static
+networks (wheel with the company at the hub, up to complete) count every result
+in full; in the dynamic network each doctor weighs sources by ball counts that
+grow or shrink with a one-sample t-test of each report (b_ij += L(1.96 − |t|)).
+Bias 0.03, N = 5,000: better drug 43% (wheel) / 61% (complete) vs. 42% / 63%
+in the paper (which gives no N). Bias 0.08, N = 1,000: static ~0, dynamic ~85%
+(paper: almost never / 80%).
+
 ## Layout
 
 ```
@@ -152,6 +163,7 @@ conformity.html             model 4 page          app/beta-lab.js
 propaganda.html             model 5 page          app/propaganda-app.js
 freerider.html              model 6 page          app/freerider-app.js
 trust.html                  model 7 page          app/trust-app.js
+biased.html                 model 8 page          app/biased-app.js
 css/lab.css                 shared page styles
 models/zollman.js           model 1 engine, with optional exploration (no DOM; runs in Node)
 models/polarization.js      model 2 engine
@@ -160,6 +172,7 @@ models/kummerfeld-zollman.js  Kummerfeld & Zollman (2016) epsilon-greedy model a
 models/beta-bandit.js       beta-belief agents (Zollman 2010; conformity)
 models/propaganda.js        policy makers, propagandist, journalists
 models/trust.js             urn reinforcement learning of whom to consult
+models/biased.js            Holman & Bruner doctors, biased company, t-test trust
 models/experiments.js       one-run functions for the sweeps on models 3-5 and 7
 lib/sweep.js, lib/experiment-ui.js, lib/lab.js   generic sweep, experiment panel, playback
 lib/rng.js                  seeded PRNG, binomial sampler
@@ -202,5 +215,6 @@ normal approximation to the binomial; smaller batches are drawn exactly.
 - Weatherall, J. O., O'Connor, C. & Bruner, J. (2020). How to beat science and influence people. *BJPS* 71(4). <https://arxiv.org/abs/1801.01239>
 - Weatherall, J. O. & O'Connor, C. (2021). Conformity in scientific networks. *Synthese* 198. <https://arxiv.org/abs/1803.09905>
 - Barrett, J. A., Skyrms, B. & Mohseni, A. (2019). Self-assembling networks. *BJPS* 70(1).
+- Holman, B. & Bruner, J. P. (2015). The problem of intransigently biased agents. *Philosophy of Science* 82(5).
 - Pozzi, M. (2025). From individual trust to collective knowledge: modeling epistemic vigilance. CIFMA 2025. <https://cifma.github.io/Papers-2025/S4-5-Pozzi.pdf>
 - Weisberg, J. (2020). Blog series on the Zollman effect and polarization: <https://jonathanweisberg.org/post/zollman/>, code at <https://github.com/jweisber/sep-sen>
