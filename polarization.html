@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scientific Polarization</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Interactive version of O'Connor and Weatherall's model of scientific polarization: Bayesian agents who discount evidence from colleagues who disagree with them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/lab.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Network epistemology testbed</a><span aria-hidden="true">/</span><span>Model 2 · Polarization</span></nav>
+    <h1>Scientific Polarization</h1>
+    <p class="lede">In the Zollman model there is one way to get stuck: everyone stops testing B, so no new evidence is produced. O’Connor and Weatherall (2018) add a second. Scientists trust evidence less the more its source disagrees with them. Now the believers keep testing B and sharing their results, the doubters hear every one of them, and the doubters still never move. <strong>The evidence is there; trust in it has run out.</strong> Both panels below get identical evidence. Only how far the scientists trust each other differs.</p>
+  </header>
+
+  <section class="lab" aria-label="Simulation">
+    <aside class="rail" aria-label="Model parameters">
+      <div class="field span-all">
+        <p class="group-label">Scenarios</p>
+        <div class="chips" id="scenarios">
+          <button class="chip" type="button" data-scenario="trust">Trust vs. mistrust</button>
+          <button class="chip" type="button" data-scenario="mild">Mild mistrust (m = 1)</button>
+          <button class="chip" type="button" data-scenario="anti">Anti-updating</button>
+          <button class="chip" type="button" data-scenario="sparse">Mistrust on a cycle</button>
+          <button class="chip" type="button" data-scenario="paper">Paper’s Fig. 2 setting</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-N">Agents</label><output id="out-N" for="in-N">10</output></div>
+        <input type="range" id="in-N" min="2" max="40" step="1" value="10">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-eps">Advantage of B, ε</label><output id="out-eps" for="in-eps">0.05</output></div>
+        <input type="range" id="in-eps" min="0" max="8" step="1" value="3">
+        <span class="hint" id="hint-eps"></span>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-n">Trials per round, n</label><output id="out-n" for="in-n">20</output></div>
+        <input type="range" id="in-n" min="0" max="9" step="1" value="4">
+      </div>
+      <div class="field">
+        <span class="label">Starting credence in B</span>
+        <div class="pair">
+          <div class="field"><div class="field-top"><label for="in-lo" class="hint">from</label><output id="out-lo" for="in-lo">0.00</output></div><input type="range" id="in-lo" min="0" max="1" step="0.05" value="0"></div>
+          <div class="field"><div class="field-top"><label for="in-hi" class="hint">to</label><output id="out-hi" for="in-hi">1.00</output></div><input type="range" id="in-hi" min="0" max="1" step="0.05" value="1"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="in-seed">Random seed</label>
+        <div style="display:flex; gap:6px">
+          <input type="number" id="in-seed" min="0" step="1" value="9">
+          <button class="btn small" type="button" id="btn-reseed">New</button>
+        </div>
+        <span class="hint">Same seed, same priors and same results in both panels.</span>
+      </div>
+      <div class="field">
+        <span class="label" id="rule-label">Evidence from someone too distrusted is</span>
+        <div class="seg" role="group" aria-labelledby="rule-label">
+          <button type="button" data-rule="ignore" aria-pressed="true">Ignored</button>
+          <button type="button" data-rule="anti" aria-pressed="false">Held against them</button>
+        </div>
+        <span class="hint" id="rule-hint">The paper’s Eq. 2: past the cutoff, the result changes nothing.</span>
+      </div>
+      <div class="field">
+        <span class="label" id="order-label">Update order</span>
+        <div class="seg" role="group" aria-labelledby="order-label">
+          <button type="button" data-order="sequential" aria-pressed="true">One at a time</button>
+          <button type="button" data-order="simultaneous" aria-pressed="false">All at once</button>
+        </div>
+        <span class="hint">The paper doesn’t say. “One at a time” reproduces its figures; see the experiment below.</span>
+      </div>
+      <div class="field span-all">
+        <button class="btn" type="button" id="btn-find">Find a seed where they differ</button>
+        <p class="note" id="find-note" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <span class="label">Belief chart scale</span>
+        <div class="chips" role="group" aria-label="Belief chart scale">
+          <button class="chip" type="button" data-scale="credence" aria-pressed="true">Credence</button>
+          <button class="chip" type="button" data-scale="logodds" aria-pressed="false">Log-odds</button>
+        </div>
+      </div>
+      <label class="field" style="grid-template-columns:auto 1fr; align-items:center; gap:8px">
+        <input type="checkbox" id="in-anim" checked style="accent-color:var(--accent)">
+        <span class="label" style="font-size:13.5px">Show results travelling along links</span>
+      </label>
+    </aside>
+
+    <div class="arena">
+      <div class="transport" role="toolbar" aria-label="Playback">
+        <div class="group">
+          <button class="btn primary" type="button" id="btn-play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Play</span></button>
+          <button class="btn" type="button" id="btn-step">Step</button>
+          <button class="btn" type="button" id="btn-reset">Restart</button>
+        </div>
+        <div class="speed">
+          <label for="in-speed">Speed</label>
+          <input type="range" id="in-speed" min="0" max="7" step="1" value="1">
+          <output id="out-speed" for="in-speed">2 / s</output>
+        </div>
+        <div class="round-big">Round <b id="round">0</b></div>
+        <span class="kbd-hint"><kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>R</kbd> restart</span>
+      </div>
+
+      <div class="panels" id="panels"></div>
+
+      <div class="legend" aria-label="Legend">
+        <div class="item scale">
+          <div class="scale-bar"></div>
+          <div class="scale-ticks"><span>0 · A is better</span><span>0.5</span><span>1 · B</span></div>
+        </div>
+        <div class="item"><span class="glyph filled"></span>Tests B</div>
+        <div class="item"><span class="glyph hollow"></span>Does A</div>
+        <div class="item"><span class="edge-key"></span>Trusted link</div>
+        <div class="item"><span class="edge-key faint"></span>Partly trusted</div>
+        <div class="item"><span class="edge-key dotted"></span>Ignored</div>
+        <div class="item"><span class="edge-key anti"></span>Held against</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="model" aria-labelledby="model-h">
+    <div class="section-head">
+      <span class="eyebrow">The model</span>
+      <h2 id="model-h">Same bandit, uncertain evidence</h2>
+      <p>Everything is as in <a href="zollman.html">the Zollman model</a> except one step. Agents still hold a credence that B is better, test B only if that credence is above 0.5, and see their own and their neighbours’ results. But they no longer take a colleague’s report at face value.</p>
+    </div>
+    <div class="model-grid">
+      <div class="prose">
+        <h3>How much to trust a result</h3>
+        <p>When Jill hears that Ian saw <i>k</i> successes in <i>n</i> trials, she asks how far apart their beliefs are, <i>d</i> = |Jill’s credence − Ian’s credence|. She then decides how much to believe the report itself. In the version the paper calls “ignoring”, the result moves her only part of the way that a full Bayesian update would:</p>
+        <div class="formula">trust = 1 − min(1, d · m)&nbsp;&nbsp;&nbsp;&nbsp;new credence = trust · (Bayes posterior) + (1 − trust) · (old credence)</div>
+        <p>That is Jeffrey’s rule written out for this case. The <b>mistrust multiplier</b> <i>m</i> sets how fast trust falls. With <i>m</i> = 0 everyone trusts everyone, and this is the Zollman model, run for run. With <i>m</i> = 2, a colleague whose credence differs from yours by 0.5 or more is ignored completely. Your own results always count in full, since you are at distance 0 from yourself.</p>
+        <p>In the second version, trust can go negative. A report from someone far enough away is taken as a reason to believe the opposite. Toggle “Held against them” on the left to see this.</p>
+
+        <h3>A new absorbing state</h3>
+        <p>Suppose the believers have all passed 0.99 and the doubters are all at 0.5 or below. If every doubter is at least 1/<i>m</i> away from every believer they hear from, nothing can change. The believers only grow more confident, and every result they share is ignored by the people who need it. The paper calls this <b>stable polarization</b>. In the belief chart it is the shaded band: with believers near 1, a doubter below 1 − 1/<i>m</i> is beyond their reach.</p>
+        <p>This trap differs from the Zollman one in a way that matters. In the Zollman model the community gets stuck because <em>no evidence is produced</em>, so more data per round helps only by keeping testers alive. Here the evidence is produced and delivered, and it fails anyway, so more of it does not rescue the doubters. What does help is evidence clear enough to convince people <em>before</em> beliefs drift too far apart. That is why polarization is rarer when B is much better (larger ε), as in the paper’s Fig. 3.</p>
+      </div>
+      <div class="aside-card">
+        <h3>Parameters</h3>
+        <table class="param-table">
+          <tr><td>m</td><td>Mistrust multiplier, set per panel. Trust falls to zero at a belief gap of 1/m. No polarization is possible for m ≤ 1, since no gap is ever large enough.</td></tr>
+          <tr><td>ε</td><td>B succeeds with probability 0.5 + ε. The paper uses pB from .501 to .8.</td></tr>
+          <tr><td>n</td><td>Trials per round, 1 to 100 in the paper.</td></tr>
+          <tr><td>N</td><td>Community size, 2 to 20 in the paper, which only uses complete networks.</td></tr>
+        </table>
+        <h3>Things to try</h3>
+        <ul>
+          <li>Play the default. Watch the links between the two camps go dotted, then watch the believers’ results stall halfway across.</li>
+          <li>Set the right panel to m = 1. Polarization can’t happen, but consensus is slower. That is the paper’s Fig. 4.</li>
+          <li>Raise ε to 0.2. Is it easier or harder to find a polarized seed?</li>
+          <li>Put the mistrustful community on a cycle. It hears less, and it now polarizes <em>more</em>, the reverse of the Zollman effect.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="experiment" aria-labelledby="exp-h">
+    <div class="section-head">
+      <span class="eyebrow">Monte Carlo experiment</span>
+      <h2 id="exp-h">How often does a community polarize?</h2>
+      <p>Each point is many independent communities with priors drawn uniformly from 0 to 1. Every run ends in one of three ways: right consensus, wrong consensus, or stable polarization. Presets reproduce the paper’s figures and two checks it doesn’t include.</p>
+    </div>
+    <div class="exp-controls">
+      <div class="field span-all">
+        <p class="group-label">Presets</p>
+        <div class="chips" id="exp-presets"></div>
+        <p class="note" id="exp-preset-note"></p>
+      </div>
+      <div class="field">
+        <label for="exp-vary">Vary</label>
+        <select id="exp-vary">
+          <option value="m">Mistrust multiplier, m</option>
+          <option value="N">Number of agents, N</option>
+          <option value="eps">Advantage of B, ε</option>
+          <option value="n">Trials per round, n</option>
+        </select>
+        <input type="text" class="mono" id="exp-values" aria-label="Values to try" value="1, 1.25, 1.5, 2, 2.5, 3">
+      </div>
+      <div class="field">
+        <label for="exp-series">Compare</label>
+        <select id="exp-series">
+          <option value="N">Number of agents, N</option>
+          <option value="m">Mistrust multiplier, m</option>
+          <option value="eps">Advantage of B, ε</option>
+          <option value="n">Trials per round, n</option>
+          <option value="network">Network</option>
+          <option value="order">Update order</option>
+          <option value="rule">Ignore vs. anti-update</option>
+        </select>
+        <input type="text" class="mono" id="exp-series-values" aria-label="Values to compare" value="6, 10, 20">
+        <span class="hint" id="exp-series-hint">Separate with commas. Networks: complete, cycle, wheel, star, grid…</span>
+      </div>
+      <div class="field">
+        <span class="label">Hold the others at</span>
+        <div class="pair" style="grid-template-columns: repeat(4, minmax(0,1fr))">
+          <div class="field"><label class="hint" for="exp-N">N</label><input type="number" id="exp-N" min="2" max="100" value="10"></div>
+          <div class="field"><label class="hint" for="exp-eps">ε</label><input type="number" id="exp-eps" min="0.001" max="0.49" step="0.01" value="0.2"></div>
+          <div class="field"><label class="hint" for="exp-n">n</label><input type="number" id="exp-n" min="1" max="10000" value="50"></div>
+          <div class="field"><label class="hint" for="exp-m">m</label><input type="number" id="exp-m" min="0" max="10" step="0.1" value="2"></div>
+        </div>
+        <div class="pair" style="grid-template-columns: repeat(auto-fit, minmax(128px, 1fr))">
+          <select id="exp-network" aria-label="Network"></select>
+          <select id="exp-order" aria-label="Update order"><option value="sequential">One at a time</option><option value="simultaneous">All at once</option></select>
+          <select id="exp-rule" aria-label="Distrusted evidence"><option value="ignore">Ignored</option><option value="anti">Held against</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">Runs per point, round cap</span>
+        <div class="pair">
+          <input type="number" id="exp-runs" min="10" max="100000" step="10" value="500" aria-label="Runs per point">
+          <input type="number" id="exp-cap" min="10" max="100000" step="100" value="20000" aria-label="Round cap">
+        </div>
+      </div>
+      <div class="run-row span-all">
+        <button class="btn primary" type="button" id="exp-run">Run experiment</button>
+        <div class="progress">
+          <div class="progress-track"><div class="progress-fill" id="exp-fill"></div></div>
+          <span class="progress-text" id="exp-progress" aria-live="polite"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="exp-out" style="grid-template-columns: minmax(0, 1fr)">
+      <div class="chart-card">
+        <div class="field-top" style="align-items:center; flex-wrap:wrap">
+          <h3 id="chart-title">Share of runs ending polarized</h3>
+          <select id="exp-metric" aria-label="What to plot" style="width:auto">
+            <option value="polarized">Share of runs ending polarized</option>
+            <option value="correct">Share reaching the right consensus</option>
+            <option value="incorrect">Share reaching the wrong consensus</option>
+            <option value="leftBehind">Share of agents not convinced of B at the end</option>
+            <option value="rounds">Rounds to the right consensus</option>
+          </select>
+        </div>
+        <p class="sub" id="chart-sub"></p>
+        <div class="chart-legend" id="legend"></div>
+        <div class="chart-box" id="chart"></div>
+      </div>
+    </div>
+    <div class="effect-strip">
+      <div class="field-top"><h3 style="font-family:var(--body); font-size:15px">Results table</h3><span class="source-tag" id="exp-source"></span></div>
+      <div class="table-scroll"><table class="results" id="exp-table"></table></div>
+    </div>
+  </section>
+
+  <section class="section" id="reading" aria-labelledby="read-h">
+    <div class="section-head">
+      <span class="eyebrow">Sources and checks</span>
+      <h2 id="read-h">Where this comes from</h2>
+    </div>
+    <ul class="refs">
+      <li><b>O’Connor, C. &amp; Weatherall, J. O. (2018). <a href="https://arxiv.org/abs/1712.04561">Scientific polarization.</a></b> <i>European Journal for Philosophy of Science</i> 8. <span class="why">The model: Jeffrey updating with trust that falls with belief distance (their Eqs. 1 and 2), complete networks of 2 to 20 agents, and the definition of stable polarization used here.</span></li>
+      <li><b>Weisberg, J. (2020). <a href="https://jonathanweisberg.org/post/ow/">Mistrust &amp; polarization</a>, with <a href="https://github.com/jweisber/sep-sen">code</a>.</b> <span class="why">An independent reimplementation. Its update order (one agent at a time, judging distance from credences as they stand) is the one that reproduces the paper’s Figure 2, so it is the default here.</span></li>
+      <li><b>Checks.</b> <span class="why">With m = 0 this engine reproduces the Zollman model exactly, run for run (tests/polarization.test.js). With 10 agents, n = 50 and pB = .7 it gives 64% polarized at m = 1.5 and 92% at m = 2; the paper’s Fig. 2 shows about 64% and 91%.</span></li>
+    </ul>
+  </section>
+
+  <footer>Part of the network epistemology testbed. Seeded random numbers: a seed always replays the same run. Batches of n ≥ 60 trials use a normal approximation to the binomial.</footer>
+</div>
+
+<script src="lib/rng.js"></script>
+<script src="lib/networks.js"></script>
+<script src="models/polarization.js"></script>
+<script src="models/polarization-sweep.js"></script>
+<script src="lib/charts.js"></script>
+<script src="lib/views.js"></script>
+<script src="data/polarization-presets.js"></script>
+<script src="app/polarization-app.js"></script>
+</body>
+</html>

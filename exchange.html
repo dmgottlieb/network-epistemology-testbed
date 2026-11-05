@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>What Is a Cycle Worth?</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Pricing network structure in exploration: how much deliberate exploration a complete network needs to be as reliable as a sparse one in the Zollman model.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/lab.css">
+<style>
+.xchart svg, .dots svg { display: block; width: 100%; height: auto; overflow: visible; }
+.xchart, .dots { position: relative; min-width: 0; }
+.two-col { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .two-col { grid-template-columns: minmax(0, 1fr); } }
+.dots .row-hit { cursor: pointer; }
+.dots .row-hit:hover rect.bg { fill: var(--surface-2); }
+.stat-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 10px 14px; min-width: 150px; flex: 1 1 150px; }
+.stat .k { font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.stat .v { font-family: var(--mono); font-size: 20px; }
+.stat .d { font-size: 12.5px; color: var(--ink-2); }
+/* these panels carry an extra strip chart: seven rows, not five */
+.panels .panel { grid-row: span 7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Network epistemology testbed</a><span aria-hidden="true">/</span><span>Analysis · Model 1 with exploration</span></nav>
+    <h1>What Is a Cycle Worth?</h1>
+    <p class="lede">In <a href="zollman.html">the Zollman model</a> a cycle beats a complete network because everyone-does-A is a trap, and sparse communication makes the whole community less likely to fall into it at once. Deliberate exploration attacks the same trap a different way. Here a complete network’s doubters sometimes test B anyway, and we ask <strong>how much exploration it takes to match a cycle</strong>. The answer is a single number per network, and it works as an exchange rate.</p>
+  </header>
+
+  <section class="lab" aria-label="Simulation">
+    <aside class="rail" aria-label="Parameters">
+      <div class="field span-all">
+        <p class="group-label">The exploration rule</p>
+        <p class="note" style="font-size:13px">Each round, every agent with credence ≤ 0.5 tests B anyway with probability <i>x</i>. We set <i>x</i> through a <b>budget</b>: the number of exploratory tests an agent would run if it doubted B for the whole horizon, so <i>x</i> = budget ÷ horizon.</p>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-H">Horizon, rounds</label><output id="out-H" for="in-H">2,000</output></div>
+        <input type="range" id="in-H" min="0" max="4" step="1" value="1">
+        <span class="hint" id="hint-x"></span>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-N">Agents</label><output id="out-N" for="in-N">10</output></div>
+        <input type="range" id="in-N" min="3" max="40" step="1" value="10">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-eps">Advantage of B, ε</label><output id="out-eps" for="in-eps">0.001</output></div>
+        <input type="range" id="in-eps" min="0" max="5" step="1" value="0">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-n">Trials per round, n</label><output id="out-n" for="in-n">1,000</output></div>
+        <input type="range" id="in-n" min="0" max="6" step="1" value="5">
+      </div>
+      <div class="field">
+        <label for="in-seed">Random seed</label>
+        <div style="display:flex; gap:6px">
+          <input type="number" id="in-seed" min="0" step="1" value="4">
+          <button class="btn small" type="button" id="btn-reseed">New</button>
+        </div>
+        <span class="hint">Same seed, same priors and same results in both panels. Seed 4 is the default run on the Zollman page.</span>
+      </div>
+      <div class="field span-all">
+        <button class="btn" type="button" id="btn-find">Find a rescue run</button>
+        <p class="note" id="find-note" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <span class="label">Belief chart scale</span>
+        <div class="chips" role="group" aria-label="Belief chart scale">
+          <button class="chip" type="button" data-scale="credence" aria-pressed="false">Credence</button>
+          <button class="chip" type="button" data-scale="logodds" aria-pressed="true">Log-odds</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="arena">
+      <div class="transport" role="toolbar" aria-label="Playback">
+        <div class="group">
+          <button class="btn primary" type="button" id="btn-play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Play</span></button>
+          <button class="btn" type="button" id="btn-step">Step</button>
+          <button class="btn" type="button" id="btn-reset">Restart</button>
+        </div>
+        <div class="speed">
+          <label for="in-speed">Speed</label>
+          <input type="range" id="in-speed" min="0" max="7" step="1" value="6">
+          <output id="out-speed" for="in-speed">60 / s</output>
+        </div>
+        <div class="round-big">Round <b id="round">0</b></div>
+        <span class="kbd-hint"><kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>R</kbd> restart</span>
+      </div>
+      <div class="panels" id="panels"></div>
+      <div class="legend" aria-label="Legend">
+        <div class="item scale">
+          <div class="scale-bar"></div>
+          <div class="scale-ticks"><span>0 · A is better</span><span>0.5</span><span>1 · B</span></div>
+        </div>
+        <div class="item"><span class="glyph filled"></span>Tests B</div>
+        <div class="item"><span class="glyph hollow"></span>Does A</div>
+        <div class="item"><span class="glyph ring"></span>Tests B although the community’s pooled evidence says A</div>
+        <div class="item"><span class="edge-key anti" style="border-top-style:solid"></span>Strip: rounds when nobody believes B</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="mech-h">
+    <div class="section-head">
+      <span class="eyebrow">Two mechanisms</span>
+      <h2 id="mech-h">Prevention versus cure</h2>
+      <p>The violet ring marks an agent who tests B even though the evidence the community has gathered so far, pooled together with that agent’s own prior, says A is better. Both panels use the same mark, and it means something different in each.</p>
+    </div>
+    <div class="model-grid">
+      <div class="prose">
+        <p><b>In the complete network,</b> everyone already sees the pooled evidence, so a ring can only be a deliberate explorer. With seed 4 the community gives up on B at round 15, exactly as on the Zollman page. Then nobody believes B for about 190 rounds while the occasional explorer runs a batch of trials. Good batches go to everyone at once, and eventually they pull the most optimistic agent back above 0.5, after which the whole community learns quickly. Exploration doesn’t stop the community falling into the trap. <b>It gets it back out.</b></p>
+        <p><b>In the cycle,</b> rings appear without anyone choosing to explore. They are agents who haven’t yet heard the bad news from the far side of the ring, so they act on a rosier picture than the pooled evidence supports. That is the cycle’s “exploration”: <b>ignorance that happens to keep B alive.</b> It is targeted in a way random exploration is not, since it occurs exactly when the community as a whole is souring on B. Its effect is to stop the whole community from ever being in the trap at the same moment.</p>
+        <p>The batch numbers show the difference cleanly (10 agents, ε = 0.001, n = 1,000). With any amount of exploration, the complete network still falls into the trap in about 10% of runs, the same as with none. Exploration changes how many of those runs it recovers from. The cycle falls in only 2.7% of the time, and with no exploration it never gets out.</p>
+      </div>
+      <div class="stat-row" id="mech-stats"></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="rate-h">
+    <div class="section-head">
+      <span class="eyebrow">The exchange rate</span>
+      <h2 id="rate-h">How much exploration is a network worth?</h2>
+      <p>The curve is the complete network’s chance of failing to reach the right consensus as its exploration budget grows. Each horizontal line is a network with no exploration at all. Where a line meets the curve is that network’s <b>exploration equivalent</b>: the budget at which the complete network becomes exactly as reliable.</p>
+    </div>
+    <div class="two-col">
+      <div class="chart-card">
+        <h3>Chance of not reaching the right consensus</h3>
+        <p class="sub">Complete network with exploration, by budget (both axes logarithmic). Three horizons, from 2,000 to 50,000 rounds, plotted together. Hover a row in the chart below to add its line.</p>
+        <div class="chart-legend" id="xlegend"></div>
+        <div class="xchart" id="xchart"></div>
+      </div>
+      <div class="prose">
+        <h3>Why budget is the right currency</h3>
+        <p>The three curves lie on top of each other. Spreading 10 exploratory tests per agent thinly over 50,000 rounds or thickly over 2,000 buys the same reliability: 96.4% and 95.8%. What matters is how much exploring gets done, not how fast. That is what makes a horizon-free exchange rate possible.</p>
+        <p>The reason is that exploration only matters while the community is trapped. A trapped complete network acts like one agent waiting for enough good batches to climb back above 0.5. How many batches it gets depends on the total budget, not on how they are spread over time.</p>
+        <h3>The cycle’s price</h3>
+        <p>A cycle of 10 is worth about <b id="cycle-equiv">14</b> exploratory tests per agent. That sounds like a lot, but few of them are ever run, because only doubters explore and most runs never have many. At that budget the complete network actually runs <b id="cycle-realized">about 0.6</b> exploratory batches per agent, and it reaches consensus in about <b id="cycle-speed">–</b> rounds on average against the cycle’s <b id="cycle-own-speed">850</b>.</p>
+        <div class="callout">Rosenstock, Bruner and O’Connor concluded that “there are better ways to improve exploratory success than to decrease connectivity.” In this model that is literally true. The cycle’s reliability costs a complete network less than one extra batch of trials per agent, and the complete network still settles far sooner.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="match-h">
+    <div class="section-head">
+      <span class="eyebrow">Matched networks</span>
+      <h2 id="match-h">Which networks are worth the same?</h2>
+      <p>Every network on one scale. Networks at the same position are matched: they buy the same reliability, worth the same amount of exploration. Click a row to load that network into the left panel with its matched budget on the right.</p>
+    </div>
+    <div class="two-col">
+      <div class="chart-card">
+        <h3>Exploration equivalent, tests per agent</h3>
+        <p class="sub" id="dots-sub">10 agents, ε = 0.001, n = 1,000. Whiskers are 95% intervals from the networks’ own success rates.</p>
+        <div class="dots" id="dots"></div>
+      </div>
+      <div class="prose">
+        <h3>What lines up</h3>
+        <p>Very different shapes come out matched. The cycle and the line are worth the same, about 14. Cutting one link barely matters. The star, the grid and a random tree all sit together around 11 to 12, even though the star has one all-seeing hub and the grid has none. The wheel, the two-neighbour ring, the small world and the denser scale-free network cluster around 7 to 8.</p>
+        <p>The main driver is simply how many links there are. Fewer links mean less shared evidence, so beliefs stay less correlated, which is the correlation story from the Zollman page. Structure matters at the margin. Two dense cliques (21 links) are worth less than a ring with 20, because inside a clique everyone shares the same bad luck.</p>
+        <h3>Recompute for other settings</h3>
+        <div class="pair" style="grid-template-columns: repeat(4, minmax(0,1fr))">
+          <div class="field"><label class="hint" for="rc-N">N</label><input type="number" id="rc-N" min="3" max="40" value="10"></div>
+          <div class="field"><label class="hint" for="rc-eps">ε</label><input type="number" id="rc-eps" min="0.0005" max="0.2" step="0.001" value="0.001"></div>
+          <div class="field"><label class="hint" for="rc-n">n</label><input type="number" id="rc-n" min="1" max="10000" value="1000"></div>
+          <div class="field"><label class="hint" for="rc-runs">runs</label><input type="number" id="rc-runs" min="100" max="50000" step="100" value="2000"></div>
+        </div>
+        <div class="run-row" style="margin-top:8px">
+          <button class="btn primary" type="button" id="rc-run">Recompute</button>
+          <div class="progress">
+            <div class="progress-track"><div class="progress-fill" id="rc-fill"></div></div>
+            <span class="progress-text" id="rc-progress" aria-live="polite"></span>
+          </div>
+        </div>
+        <p class="note" id="rc-source" style="margin-top:6px"></p>
+      </div>
+    </div>
+    <div class="effect-strip">
+      <h3 style="font-family:var(--body); font-size:15px">All networks</h3>
+      <div class="table-scroll"><table class="results" id="xtable"></table></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="caveat-h">
+    <div class="section-head">
+      <span class="eyebrow">Caveats</span>
+      <h2 id="caveat-h">What this does and doesn’t show</h2>
+    </div>
+    <ul class="refs">
+      <li><b>The exploration rule is ours.</b> <span class="why">It follows the spirit of Kummerfeld and Zollman’s (2016) ε-greedy agents, who sometimes try the action they think is worse. Only doubters explore here, because exploring A teaches nothing when A’s rate is known. This page is an analysis built on the Zollman model, not a published result.</span></li>
+      <li><b>Exploration is nearly free in this model.</b> <span class="why">An exploratory batch costs nothing except that, in a real setting, the explorer forgoes what it believes is the better action. Here B really is better, so exploring even pays. Real exploration has costs, and a fuller comparison would price them.</span></li>
+      <li><b>Reliability is scored as in the Zollman page:</b> <span class="why">a run succeeds if everyone exceeds 0.99 within the horizon. The networks without exploration are scored the same way (their own runs end long before 10,000 rounds).</span></li>
+      <li><b>Random graphs are averaged over draws.</b> <span class="why">The small world and scale-free entries draw a new graph each run. A sparse Erdős–Rényi graph is left out because at this size it is often disconnected, and a disconnected community can never reach a full consensus.</span></li>
+      <li><b>Sources.</b> <span class="why">Zollman (2007); Rosenstock, Bruner &amp; O’Connor (2017), <a href="https://philsci-archive.pitt.edu/11900/">In epistemic networks, is less really more?</a>, whose §4 discusses Kummerfeld &amp; Zollman’s exploration results. Precomputed with tools/precompute-exchange.js: 20,000 runs per network and per budget at the 10,000-round horizon.</span></li>
+    </ul>
+  </section>
+
+  <footer>Part of the network epistemology testbed. Seeded random numbers: a seed always replays the same run.</footer>
+</div>
+
+<script src="lib/rng.js"></script>
+<script src="lib/networks.js"></script>
+<script src="models/zollman.js"></script>
+<script src="lib/charts.js"></script>
+<script src="lib/views.js"></script>
+<script src="data/exchange-presets.js"></script>
+<script src="app/exchange-app.js"></script>
+</body>
+</html>
