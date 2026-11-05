@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Free-Riding on Exploration</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Kummerfeld and Zollman's Choose-Your-Epsilon game: scientists who pick their own exploration rate leave the exploring to others.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/lab.css">
+<style>
+.stat-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r); padding: 10px 14px; min-width: 150px; flex: 1 1 150px; }
+.stat .k { font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.stat .v { font-family: var(--mono); font-size: 20px; }
+.stat .d { font-size: 12.5px; color: var(--ink-2); }
+.one { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+.glyph.diamond { border-radius: 2px; transform: rotate(45deg) scale(0.8); background: var(--cred-b); }
+.two-col { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .two-col { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Network epistemology testbed</a><span aria-hidden="true">/</span><span>Model 6 · Choose your exploration</span></nav>
+    <h1>Free-Riding on Exploration</h1>
+    <p class="lede">Exploring pays the community and costs the explorer. When I try the risky idea and it flops, I lose the payoff; when it works, everyone I talk to learns from it. Kummerfeld and Zollman (2016) let each scientist choose their own exploration rate, ε, and ask what they will choose. The answer is a free-rider problem: <strong>each scientist explores less than would be best for everyone</strong>. Left to themselves, communities land in the low-exploration region where, as <a href="exchange.html#published">the exchange-rate page</a> shows, sparse networks help.</p>
+  </header>
+
+  <section class="lab" aria-label="One episode">
+    <aside class="rail" aria-label="Parameters">
+      <div class="field span-all">
+        <p class="note" style="font-size:13px">Fifty rounds, one pull each. A safe arm pays 0; a risky one pays a draw with mean 1 and a large spread (sd 9). Each scientist pulls whichever arm has done better on average among the results it has seen, except that with probability ε it pulls the other one. The diamond is the <b>hero</b>, who can choose a different ε from everyone else.</p>
+      </div>
+      <div class="field">
+        <label for="in-net">Network</label>
+        <select id="in-net"><option value="complete">Complete</option><option value="cycle">Ring</option></select>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-N">Scientists</label><output id="out-N" for="in-N"></output></div>
+        <input type="range" id="in-N" min="2" max="12" step="1">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-epsG">Everyone else’s ε</label><output id="out-epsG" for="in-epsG"></output></div>
+        <input type="range" id="in-epsG" min="0" max="0.5" step="0.01">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-epsH">The hero’s ε</label><output id="out-epsH" for="in-epsH"></output></div>
+        <input type="range" id="in-epsH" min="0" max="0.5" step="0.01">
+      </div>
+      <div class="field">
+        <label for="in-seed">Random seed</label>
+        <div style="display:flex; gap:6px">
+          <input type="number" id="in-seed" min="0" step="1" value="1">
+          <button class="btn small" type="button" id="btn-reseed">New</button>
+        </div>
+      </div>
+      <div class="field span-all">
+        <button class="btn primary" type="button" id="btn-many">Run 4,000 episodes</button>
+        <span class="hint">One episode is mostly luck. This compares the hero’s average payoff with everyone else’s.</span>
+      </div>
+    </aside>
+    <div class="arena">
+      <div class="transport" role="toolbar" aria-label="Playback">
+        <div class="group">
+          <button class="btn primary" type="button" id="btn-play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Play</span></button>
+          <button class="btn" type="button" id="btn-step">Step</button>
+          <button class="btn" type="button" id="btn-reset">Restart</button>
+        </div>
+        <div class="speed">
+          <label for="in-speed">Speed</label>
+          <input type="range" id="in-speed" min="0" max="7" step="1">
+          <output id="out-speed" for="in-speed"></output>
+        </div>
+        <div class="round-big">Round <b id="round">0</b></div>
+      </div>
+      <article class="panel one">
+        <div class="net-wrap" style="height: clamp(260px, 28vw, 340px)"><canvas id="graph" aria-label="Network diagram"></canvas></div>
+        <dl class="readout">
+          <div><dt>Round</dt><dd id="o-round">–</dd></div>
+          <div><dt>Hero payoff / pull</dt><dd id="o-hero">–</dd></div>
+          <div><dt>Others / pull</dt><dd id="o-group">–</dd></div>
+          <div><dt title="Risky pulls: hero vs. average other">Risky pulls</dt><dd id="o-risky">–</dd></div>
+        </dl>
+        <div class="traj-title"><span>How strongly each scientist favours the risky arm (hover one to follow it)</span></div>
+        <div class="traj-wrap"><canvas id="traj"></canvas></div>
+      </article>
+      <div class="stat-row" id="many-out"></div>
+      <div class="legend" aria-label="Legend">
+        <div class="item scale">
+          <div class="scale-bar"></div>
+          <div class="scale-ticks"><span>favours safe</span><span></span><span>favours risky</span></div>
+        </div>
+        <div class="item"><span class="glyph filled"></span>Pulled the risky arm</div>
+        <div class="item"><span class="glyph hollow"></span>Pulled the safe arm</div>
+        <div class="item"><span class="glyph ring"></span>Explored: pulled the arm it thinks worse</div>
+        <div class="item"><span class="glyph diamond"></span>The hero</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="br-h">
+    <div class="section-head">
+      <span class="eyebrow">The game</span>
+      <h2 id="br-h">What should one scientist do?</h2>
+      <p>Fix everyone else’s exploration rate and find the hero’s best reply. Where the best-reply curve crosses the line x = y, nobody gains by deviating: that is the symmetric Nash equilibrium, what a community of self-interested scientists should settle into.</p>
+    </div>
+    <div class="two-col">
+      <div class="chart-card">
+        <div class="field-top" style="align-items:center; flex-wrap:wrap">
+          <h3>The hero’s best exploration rate</h3>
+          <div class="seg" role="group" aria-label="Network"><button type="button" data-brnet="complete" aria-pressed="true">Complete</button><button type="button" data-brnet="cycle" aria-pressed="false">Ring</button></div>
+        </div>
+        <p class="sub">10,000 simulated communities per point, with common random numbers across the hero’s options. Best replies are read off a quadratic fitted near the best grid point.</p>
+        <div class="chart-legend" id="br-legend"></div>
+        <div class="chart-box" id="br-chart"></div>
+      </div>
+      <div class="prose">
+        <h3>Reading the curve</h3>
+        <p>When nobody else explores (left edge), the hero should explore a lot: no one else will discover that the risky arm is good. As the others explore more, the hero’s best reply falls, steeply in bigger groups. With eight connected scientists, once the others explore at about 0.06, the hero does best not exploring at all and simply learning from them.</p>
+        <p>The curves cross x = y at about 0.24 for 2 scientists, 0.13 for 4, 0.08 for 6 and 0.05 for 8. The paper reports 0.24, 0.13, 0.085 and 0.06.</p>
+        <h3>A payoff curve</h3>
+        <div class="field">
+          <div class="field-top"><label for="in-curveG">Everyone else explores at</label><output id="out-curveG" for="in-curveG"></output></div>
+          <input type="range" id="in-curveG" min="0" step="1">
+        </div>
+        <div class="seg" role="group" aria-label="Group size" style="margin-top:6px"><button type="button" data-curven="2" aria-pressed="false">2</button><button type="button" data-curven="4" aria-pressed="false">4</button><button type="button" data-curven="6" aria-pressed="false">6</button><button type="button" data-curven="8" aria-pressed="true">8</button></div>
+        <p class="note" id="curve-note" style="margin-top:6px"></p>
+        <div class="chart-legend" id="curve-legend"></div>
+        <div class="chart-box" id="curve-chart"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="gap-h">
+    <div class="section-head">
+      <span class="eyebrow">The dilemma</span>
+      <h2 id="gap-h">What scientists choose vs. what would be best</h2>
+      <p>“Best for the community” is the ε that maximises everyone’s total payoff when all use it. “What scientists choose” is the Nash equilibrium. The gap is the free-rider problem, and it widens as the community grows.</p>
+    </div>
+    <div class="two-col">
+      <div class="chart-card">
+        <h3>Exploration rate by community size (Figs. 2 and 5)</h3>
+        <p class="sub">Solid: community optimum. Dashed: Nash equilibrium.</p>
+        <div class="chart-legend" id="gap-legend"></div>
+        <div class="chart-box" id="gap-chart"></div>
+        <div class="table-scroll"><table class="results" id="gap-table"></table></div>
+      </div>
+      <div class="prose">
+        <h3>Why this matters for the other models</h3>
+        <p>Zollman’s original models assumed scientists never explore, and found sparse networks helped. Kummerfeld and Zollman show the helpfulness depends on how much scientists explore, and then show that self-interested scientists will explore little. The two results fit together: the “state of nature” of science is the low-exploration condition under which sparse communication substitutes for the exploration nobody wants to pay for.</p>
+        <p>Their recommendation is not to cut communication but to fix the incentive: “actively encouraging unpopular, risky science would improve scientific outcomes.”</p>
+        <p class="note">The ring’s optimum is noisier than the complete network’s because its payoff curve is very flat near the top (see the exchange-rate page).</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="read-h">
+    <div class="section-head">
+      <span class="eyebrow">Sources</span>
+      <h2 id="read-h">Where this comes from</h2>
+    </div>
+    <ul class="refs">
+      <li><b>Kummerfeld, E. &amp; Zollman, K. J. S. (2016). Conservatism and the scientific state of nature.</b> <i>BJPS</i> 67(4): 1057–1076. <span class="why">The Choose-Your-ε game, Figs. 1, 2, 4 and 5. They used 10 million simulations per point; we use 10,000 with common random numbers. Two details are reconstructed to match their Fig. 6: a risky-arm sd of 9 and treating an arm with no results yet as the better one.</span></li>
+    </ul>
+  </section>
+  <footer>Part of the network epistemology testbed.</footer>
+</div>
+<script src="lib/rng.js"></script>
+<script src="lib/networks.js"></script>
+<script src="lib/charts.js"></script>
+<script src="lib/views.js"></script>
+<script src="lib/lab.js"></script>
+<script src="models/kummerfeld-zollman.js"></script>
+<script src="data/freerider-presets.js"></script>
+<script src="app/freerider-app.js"></script>
+</body>
+</html>

@@ -90,18 +90,64 @@ network with none.
   to match that figure: the risky arm's sd is 9 (the text says variance 9),
   and an arm an agent has no results for counts as the better one.
 
+### 3. Transient diversity (`diversity.html`)
+
+Zollman (2010). Both methods' success rates are unknown (0.5 and 0.499);
+each agent holds beta priors on both, with parameters uniform on [0, max].
+`max` measures dogmatism. Reproduces Fig. 3 (cycle 0.67 → 0.95 as N goes
+from 4 to 11; complete 0.50–0.64) and the diversity-over-time curves of Fig. 7.
+Fig. 6's reversal under dogmatic priors depends on the horizon: at 10,000
+rounds our dogmatic cycles still mostly learn; at 3,000 the reversal appears.
+
+### 4. Conformity (`conformity.html`)
+
+Weatherall & O'Connor (2021). Beta agents add k × (neighbours doing the same −
+neighbours doing otherwise) to each arm's expected payoff. Five outcomes:
+correct / incorrect consensus, each with or without hidden disagreement, and
+polarization. Agents choose one at a time in random order and do not count
+themselves; only that combination reproduces the paper's claims that cycles
+and complete networks never polarize stably (k = 0.1: cycle 84%, wheel 53%,
+complete 51% on the better action vs. 87%, 57%, ~55% in the paper; two
+cliques polarize in about half of runs).
+
+### 5. Propaganda (`propaganda.html`)
+
+Weatherall, O'Connor & Bruner (2020). Model 1 scientists plus sceptical policy
+makers and a propagandist who forwards only results favouring A (selective
+sharing) or funds its own studies and publishes only the favourable ones
+(biased production); also journalists who report all, two random, or one
+result per side ("fair"). The science is identical with and without the
+propagandist for the same seed. Study-size effects (Figs. 4, 7) and the funded
+propagandist (Fig. 6) match the paper within ~0.1; with selective sharing our
+policy makers resist better than in Fig. 2 when they follow most scientists.
+
+### 6. Free-riding on exploration (`freerider.html`)
+
+Kummerfeld & Zollman's Choose-Your-ε game. One hero's best reply to the
+group's exploration rate, estimated with common random numbers; symmetric Nash
+equilibria at 0.24, 0.13, 0.08, 0.05 for 2, 4, 6, 8 connected scientists
+(paper: 0.24, 0.13, 0.085, 0.06) against community optima near 0.32–0.18.
+
 ## Layout
 
 ```
 index.html                  landing page
 zollman.html                model 1 page          app/zollman-app.js
 polarization.html           model 2 page          app/polarization-app.js
-exchange.html               exploration analysis  app/exchange-app.js
+exchange.html               exploration analysis  app/exchange-app.js, app/kz-section.js
+diversity.html              model 3 page          app/beta-lab.js (shared with conformity)
+conformity.html             model 4 page          app/beta-lab.js
+propaganda.html             model 5 page          app/propaganda-app.js
+freerider.html              model 6 page          app/freerider-app.js
 css/lab.css                 shared page styles
 models/zollman.js           model 1 engine, with optional exploration (no DOM; runs in Node)
 models/polarization.js      model 2 engine
 models/polarization-sweep.js  parameter sweeps shared by page and precompute script
-models/kummerfeld-zollman.js  Kummerfeld & Zollman (2016) epsilon-greedy model
+models/kummerfeld-zollman.js  Kummerfeld & Zollman (2016) epsilon-greedy model and hero game
+models/beta-bandit.js       beta-belief agents (Zollman 2010; conformity)
+models/propaganda.js        policy makers, propagandist, journalists
+models/experiments.js       one-run functions for the sweeps on models 3-5
+lib/sweep.js, lib/experiment-ui.js, lib/lab.js   generic sweep, experiment panel, playback
 lib/rng.js                  seeded PRNG, binomial sampler
 lib/networks.js             graph generators and layouts
 lib/views.js                canvas network / trajectory / strip views
@@ -139,4 +185,6 @@ normal approximation to the binomial; smaller batches are drawn exactly.
 - Rosenstock, S., Bruner, J. & O’Connor, C. (2017). In epistemic networks, is less really more? *Philosophy of Science* 84(2).
 - O’Connor, C. & Weatherall, J. O. (2018). Scientific polarization. *European Journal for Philosophy of Science* 8. <https://arxiv.org/abs/1712.04561>
 - Kummerfeld, E. & Zollman, K. J. S. (2016). Conservatism and the scientific state of nature. *British Journal for the Philosophy of Science* 67(4).
+- Weatherall, J. O., O'Connor, C. & Bruner, J. (2020). How to beat science and influence people. *BJPS* 71(4). <https://arxiv.org/abs/1801.01239>
+- Weatherall, J. O. & O'Connor, C. (2021). Conformity in scientific networks. *Synthese* 198. <https://arxiv.org/abs/1803.09905>
 - Weisberg, J. (2020). Blog series on the Zollman effect and polarization: <https://jonathanweisberg.org/post/zollman/>, code at <https://github.com/jweisber/sep-sen>

@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conformity in Science</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Weatherall and O'Connor's model of conformity in scientific networks: scientists who weigh evidence against doing what their colleagues do.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/lab.css">
+<style>.panels .panel { grid-row: span 7; }</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Network epistemology testbed</a><span aria-hidden="true">/</span><span>Model 4 · Conformity</span></nav>
+    <h1>Conformity in Science</h1>
+    <p class="lede">Semmelweis showed that hand-washing saved mothers’ lives, and his colleagues kept not washing. Weatherall and O’Connor (2021) model scientists who care about two things: the evidence, and doing what their colleagues did. With even a little conformity, a scientist can <strong>know the better action and still not take it</strong>. Then, because nobody tries the better action, nobody else learns it either. The panels share the same priors and the same luck; only the pull towards conformity differs.</p>
+  </header>
+
+  <section class="lab" aria-label="Simulation">
+    <aside class="rail" aria-label="Parameters">
+      <div class="field span-all">
+        <p class="group-label">Scenarios</p>
+        <div class="chips" id="scenarios">
+          <button class="chip" type="button" data-scenario="cliques">Two cliques</button>
+          <button class="chip" type="button" data-scenario="hidden">Knowing but not doing</button>
+          <button class="chip" type="button" data-scenario="cyclewheel">Cycle vs. wheel</button>
+          <button class="chip" type="button" data-scenario="arms">Four options</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-N">Agents</label><output id="out-N" for="in-N">10</output></div>
+        <input type="range" id="in-N" min="3" max="30" step="1">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-pB">Better arm pays</label><output id="out-pB" for="in-pB"></output></div>
+        <input type="range" id="in-pB" min="0" max="3" step="1">
+        <span class="hint">Every other arm pays 0.5. Nobody knows any of the rates.</span>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-n">Trials per round</label><output id="out-n" for="in-n"></output></div>
+        <input type="range" id="in-n" min="0" max="5" step="1">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-arms">Options (arms)</label><output id="out-arms" for="in-arms"></output></div>
+        <input type="range" id="in-arms" min="2" max="5" step="1">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-rounds">Rounds</label><output id="out-rounds" for="in-rounds"></output></div>
+        <input type="range" id="in-rounds" min="0" max="3" step="1">
+      </div>
+      <div class="field">
+        <label for="in-seed">Random seed</label>
+        <div style="display:flex; gap:6px">
+          <input type="number" id="in-seed" min="0" step="1" value="3">
+          <button class="btn small" type="button" id="btn-reseed">New</button>
+        </div>
+        <span class="hint">Same seed, same priors and same luck in both panels.</span>
+      </div>
+      <div class="field span-all">
+        <button class="btn" type="button" id="btn-find">Find a seed where they differ</button>
+        <p class="note" id="find-note" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <span class="label">Belief chart scale</span>
+        <div class="chips" role="group" aria-label="Belief chart scale">
+          <button class="chip" type="button" data-scale="credence" aria-pressed="true">Credence</button>
+          <button class="chip" type="button" data-scale="logodds" aria-pressed="false">Log-odds</button>
+        </div>
+      </div>
+    </aside>
+    <div class="arena">
+      <div class="transport" role="toolbar" aria-label="Playback">
+        <div class="group">
+          <button class="btn primary" type="button" id="btn-play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Play</span></button>
+          <button class="btn" type="button" id="btn-step">Step</button>
+          <button class="btn" type="button" id="btn-reset">Restart</button>
+        </div>
+        <div class="speed">
+          <label for="in-speed">Speed</label>
+          <input type="range" id="in-speed" min="0" max="8" step="1">
+          <output id="out-speed" for="in-speed"></output>
+        </div>
+        <div class="round-big">Round <b id="round">0</b></div>
+        <span class="kbd-hint"><kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>R</kbd> restart</span>
+      </div>
+      <div class="panels" id="panels"></div>
+      <div class="legend" aria-label="Legend">
+        <div class="item scale">
+          <div class="scale-bar"></div>
+          <div class="scale-ticks"><span>0 · another arm</span><span>0.5</span><span>1 · B best</span></div>
+        </div>
+        <div class="item"><span class="glyph filled"></span>Doing B, the better arm</div>
+        <div class="item"><span class="glyph hollow"></span>Doing something else</div>
+        <div class="item"><span class="glyph ring"></span>Acting against their own belief</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="model-h">
+    <div class="section-head">
+      <span class="eyebrow">The model</span>
+      <h2 id="model-h">Payoffs for fitting in</h2>
+      <p>The scientists are Zollman’s beta-belief agents (see <a href="diversity.html">Transient Diversity</a>), facing arms whose success rates they don’t know. Each agent adds a payoff for matching its neighbours’ most recent actions to its expected payoff from each arm:</p>
+    </div>
+    <div class="model-grid">
+      <div class="prose">
+        <div class="formula">u(arm) = k × (neighbours who did that arm − neighbours who did something else) + expected success of the arm</div>
+        <p>Agents pick the arm with the highest u. With <i>k</i> = 0 this is the plain model. With <i>k</i> = 0.1, a single extra neighbour on the other side is worth 0.2 in success rate, four times the real difference between the arms here. Agents still update on all the evidence they see, so their <b>beliefs</b> stay honest. Only their <b>actions</b> conform.</p>
+        <h3>Five ways a run can end</h3>
+        <p>Without conformity there are two: everyone takes the better arm and believes in it, or everyone takes the worse one. Conformity adds three. Everyone takes the same action but some believe in the other (“with disagreement”), for better or worse. And <b>polarization</b>: two groups doing different things for good. Polarization needs cliques. In a cycle, an agent on the border between two camps has one neighbour on each side, the pressures cancel, and the evidence decides. In two tight cliques joined by one link, the bridging agent can know the truth and still never act on it.</p>
+        <h3>Why conformity hurts</h3>
+        <p>At high <i>k</i> the community is mostly playing a coordination game: it matters more <em>that</em> everyone matches than <em>what</em> they match on. The better arm wins little more often than chance. With four or five options, that chance is small.</p>
+      </div>
+      <div class="aside-card">
+        <h3>Implementation notes</h3>
+        <ul>
+          <li>Agents choose one at a time, in a random order each round, so later choosers see earlier ones’ new actions. If everyone chooses at once, an evenly split complete network swaps sides forever, which the paper does not report.</li>
+          <li>An agent does not count itself among those it conforms to. Counting itself makes cycles polarize stably, which the paper says cannot happen.</li>
+          <li>Priors α, β are uniform on [0, 4] for every arm, as in the paper.</li>
+        </ul>
+        <h3>Things to try</h3>
+        <ul>
+          <li>Two cliques: watch the bridge agent turn blue while staying hollow.</li>
+          <li>Cycle vs. wheel at k = 0.1: the hub is the most pressured agent in the network.</li>
+          <li>Raise “Better arm pays” to 0.7: when the stakes are high, the evidence wins.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="exp-h">
+    <div class="section-head">
+      <span class="eyebrow">Monte Carlo experiment</span>
+      <h2 id="exp-h">How often does the community end up doing the right thing?</h2>
+      <p>“Right action” counts runs where everyone takes the better arm, whether or not they all believe in it. Each run lasts 10,000 rounds, as in the paper.</p>
+    </div>
+    <div id="exp"></div>
+  </section>
+
+  <section class="section" aria-labelledby="read-h">
+    <div class="section-head">
+      <span class="eyebrow">Sources and checks</span>
+      <h2 id="read-h">Where this comes from</h2>
+    </div>
+    <ul class="refs">
+      <li><b>Weatherall, J. O. &amp; O’Connor, C. (2021). <a href="https://arxiv.org/abs/1803.09905">Conformity in scientific networks.</a></b> <i>Synthese</i> 198. <span class="why">The utility above, the five outcomes, and the figures reproduced in the presets.</span></li>
+      <li><b>Checks.</b> <span class="why">At k = 0.1 (10 agents, pB = .55, n = 5) this engine gives the better action 84% of the time on a cycle, 53% on a wheel and 51% on a complete network, with no polarization on any of the three; the paper reports 87%, 57% and about 55%. Two cliques polarize in about half of runs; the paper says 25–50%.</span></li>
+    </ul>
+  </section>
+  <footer>Part of the network epistemology testbed.</footer>
+</div>
+
+<script src="lib/rng.js"></script>
+<script src="lib/networks.js"></script>
+<script src="lib/charts.js"></script>
+<script src="lib/views.js"></script>
+<script src="lib/lab.js"></script>
+<script src="lib/sweep.js"></script>
+<script src="lib/experiment-ui.js"></script>
+<script src="models/zollman.js"></script>
+<script src="models/beta-bandit.js"></script>
+<script src="models/propaganda.js"></script>
+<script src="models/experiments.js"></script>
+<script src="data/conformity-presets.js"></script>
+<script>
+(function () {
+  const PB = [0.51, 0.55, 0.6, 0.7];
+  const PULLS = [1, 5, 10, 20, 50, 100];
+  const ROUNDS = [1000, 2000, 5000, 10000];
+  const KS = [0, 0.0005, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1];
+  const LABEL = {
+    correct: ['correct', '✓ Correct consensus', 'Everyone does the better arm and believes in it.'],
+    correctDisagree: ['correct', '✓ Correct, with disagreement', 'Everyone does the better arm, but some believe another is better.'],
+    incorrect: ['incorrect', '✕ Incorrect consensus', 'Everyone does a worse arm and believes in it.'],
+    incorrectDisagree: ['incorrect', '✕ Incorrect, with disagreement', 'Everyone does a worse arm, though some know B is better.'],
+    polarized: ['timeout', '⇹ Polarized', 'Groups doing different arms.'],
+  };
+  const NAMES = { correct: 'reaches correct consensus', correctDisagree: 'does the right thing with some dissent', incorrect: 'settles on a worse arm', incorrectDisagree: 'does the wrong thing though some know better', polarized: 'polarizes' };
+  window.BETA_PAGE = {
+    bestName: 'B',
+    thirdLabel: 'Off belief',
+    stripOverlay: true,
+    stripNote: 'violet: acting against their own belief',
+    networks: ['clusters', 'randomConnected', 'complete', 'cycle', 'wheel', 'star', 'smallWorld', 'grid'],
+    networkLabels: { clusters: 'Two cliques, one bridge' },
+    networkParams: { clusters: { c: 2 }, randomConnected: { q: 0.5 } },
+    panelParam: { label: 'Conformity, k', steps: KS, format: (v) => String(v) },
+    rail: [['in-N', 'N'], ['in-pB', 'pB', PB, (v) => v], ['in-n', 'n', PULLS, (v) => v], ['in-arms', 'arms', null, (v) => v], ['in-rounds', 'rounds', ROUNDS, (v) => v.toLocaleString()]],
+    defaults: {
+      shared: { N: 10, pB: 0.55, n: 5, arms: 2, rounds: 10000, seed: 3 },
+      a: { type: 'clusters', value: 0 }, b: { type: 'clusters', value: 0.1 }, speed: 6,
+      note: 'Seed 3: without conformity both cliques learn B. With k = 0.1 they settle on different arms for good.',
+    },
+    scenarios: {
+      cliques: { shared: { N: 10, pB: 0.55, n: 5, arms: 2, seed: 3 }, a: ['clusters', 0], b: ['clusters', 0.1], note: 'Seed 3: without conformity both cliques learn B. With k = 0.1 they settle on different arms for good.' },
+      hidden: { shared: { N: 10, pB: 0.55, n: 5, arms: 2, seed: 2 }, a: ['complete', 0], b: ['complete', 0.1], note: 'Seed 2: on the right, everyone ends up doing A while some know B is better.' },
+      cyclewheel: { shared: { N: 10, pB: 0.55, n: 5, arms: 2, seed: 26 }, a: ['cycle', 0.1], b: ['wheel', 0.1], note: 'Seed 26, both at k = 0.1: the cycle finds B; the wheel’s hub, pressured by everyone, holds the community on A.' },
+      arms: { shared: { N: 10, pB: 0.55, n: 5, arms: 4, seed: 3 }, a: ['randomConnected', 0], b: ['randomConnected', 0.5], note: 'Four arms, one better. With strong conformity the community locks onto an arbitrary one.' },
+    },
+    runOptions: (S, k) => ({ probs: Array.from({ length: S.arms - 1 }, () => 0.5).concat([S.pB]), n: S.n, k, priorMax: 4 }),
+    blurb: (k) => (k === 0 ? 'No conformity: agents do what their evidence says.' : `Each neighbour on the same side is worth ${k} in expected success rate.`),
+    armName: (j, M) => (j === M - 1 ? 'B' : M === 2 ? 'A' : 'A' + (j + 1)),
+    status(run) {
+      if (run.round === 0) return ['running', 'Ready'];
+      const o = run.outcome();
+      const l = LABEL[o.kind];
+      if (run.status === 'running') return ['running', 'Running · ' + l[1].replace(/^[✓✕⇹] /, '').toLowerCase(), l[2]];
+      return l;
+    },
+    verdict: (run) => NAMES[run.outcome().kind],
+  };
+})();
+</script>
+<script src="app/beta-lab.js"></script>
+<script>
+(function () {
+  const { experimentUI: XUI, experiments: EX, sweep: SW, networks: NETS } = window.NET;
+  const P = window.NET.conformityPresets || {};
+  const nets = [['randomConnected', 'Random (connected)'], ['clusters', 'Two cliques'], ['complete', 'Complete'], ['cycle', 'Cycle'], ['wheel', 'Wheel'], ['star', 'Star'], ['smallWorld', 'Small world']];
+  const pct = (v) => (v == null ? '–' : (100 * v).toFixed(1) + '%');
+  const right = (a) => (a.runs ? ((a.n.correct || 0) + (a.n.correctDisagree || 0)) / a.runs : null);
+  XUI.mount(document.getElementById('exp'), {
+    variables: {
+      k: { name: 'k', label: 'Conformity, k', kind: 'num', min: 0, max: 20, defaults: '0, 0.005, 0.025, 0.1, 0.5' },
+      net: { name: 'network', label: 'Network', kind: 'enum', options: nets, defaults: 'randomConnected, clusters, complete, cycle, wheel' },
+      pB: { name: 'pB', label: 'Better arm pays', kind: 'num', min: 0.5, max: 1, defaults: '0.51, 0.55, 0.6, 0.7' },
+      n: { name: 'n', label: 'Trials per round', kind: 'int', min: 1, max: 1000, log: true, defaults: '1, 5, 20, 100' },
+      arms: { name: 'arms', label: 'Number of arms', kind: 'int', min: 2, max: 8, defaults: '2, 3, 4, 5' },
+      N: { name: 'N', label: 'Number of agents', kind: 'int', min: 3, max: 50, defaults: '6, 10, 20' },
+      rounds: { name: 'rounds', label: 'Rounds', kind: 'int', min: 100, max: 100000, log: true, defaults: '1000, 10000' },
+    },
+    varyKeys: ['k', 'net', 'pB', 'n', 'arms', 'N', 'rounds'],
+    seriesKeys: ['net', 'k', 'pB', 'n', 'arms', 'N'],
+    fixed: { k: 0.1, net: 'randomConnected', pB: 0.55, n: 5, arms: 2, N: 10, rounds: 10000 },
+    metrics: {
+      rightAction: { label: 'Share of runs ending on the better action', sub: 'Correct consensus plus correct with disagreement.', value: right, auto: true, floor: 0, fmt: pct },
+      correct: { label: 'Share reaching correct consensus', sub: 'Everyone does and believes in the better arm.', value: (a) => SW.rate(a, 'correct'), prop: 'correct', fmt: pct },
+      disagree: { label: 'Share ending with hidden disagreement', sub: 'Everyone does the same thing; someone believes in another arm.', value: (a) => (a.runs ? ((a.n.correctDisagree || 0) + (a.n.incorrectDisagree || 0)) / a.runs : null), fmt: pct },
+      polarized: { label: 'Share ending polarized', sub: 'Groups doing different arms at the end.', value: (a) => SW.rate(a, 'polarized'), prop: 'polarized', fmt: pct },
+    },
+    defaultMetric: 'rightAction', runs: 100, runOne: EX.conformity,
+    tableHead: 'right action · consensus · polarized',
+    tableCell: (a) => `${pct(right(a))} · ${pct(SW.rate(a, 'correct'))} · ${pct(SW.rate(a, 'polarized'))}`,
+    presets: P, defaultPreset: 'fig5',
+  });
+})();
+</script>
+</body>
+</html>

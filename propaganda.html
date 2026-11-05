@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Tobacco Strategy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Weatherall, O'Connor and Bruner's model of propaganda in epistemic networks: how a propagandist misleads the public using only real scientific results.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/lab.css">
+<style>.panels .panel { grid-row: span 7; } .glyph.square { border-radius: 2px; } .glyph.diamond { border-radius: 2px; transform: rotate(45deg) scale(0.8); background: var(--bad); }</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Network epistemology testbed</a><span aria-hidden="true">/</span><span>Model 5 · Propaganda</span></nav>
+    <h1>The Tobacco Strategy</h1>
+    <p class="lede">The tobacco industry rarely faked data. It funded real research and publicised the studies that went its way. Weatherall, O’Connor and Bruner (2020) model that strategy. A community of honest scientists, exactly as in <a href="zollman.html">Model 1</a>, studies whether B is better. Policy makers (squares) never experiment; they update on what they hear. A propagandist (diamond) passes on only the results that favour A. Every result anyone sees is real. <strong>The science in both panels is identical, result for result</strong>; only what the public is shown differs.</p>
+  </header>
+
+  <section class="lab" aria-label="Simulation">
+    <aside class="rail" aria-label="Parameters">
+      <div class="field span-all">
+        <p class="group-label">Scenarios</p>
+        <div class="chips" id="scenarios">
+          <button class="chip" type="button" data-scenario="selective">Selective sharing</button>
+          <button class="chip" type="button" data-scenario="funded">Funded small studies</button>
+          <button class="chip" type="button" data-scenario="power">Big studies</button>
+          <button class="chip" type="button" data-scenario="fair">“Fair” reporting</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="in-net">Scientists’ network</label>
+        <select id="in-net"><option value="cycle">Cycle</option><option value="complete">Complete</option><option value="wheel">Wheel</option><option value="smallWorld">Small world</option></select>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-K">Scientists</label><output id="out-K" for="in-K"></output></div>
+        <input type="range" id="in-K" min="4" max="40" step="1">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-eps">Advantage of B, ε</label><output id="out-eps" for="in-eps"></output></div>
+        <input type="range" id="in-eps" min="0" max="5" step="1">
+        <span class="hint" id="hint-eps"></span>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-n">Trials per study, n</label><output id="out-n" for="in-n"></output></div>
+        <input type="range" id="in-n" min="0" max="8" step="1">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-P">Policy makers</label><output id="out-P" for="in-P"></output></div>
+        <input type="range" id="in-P" min="1" max="20" step="1">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-listen">Each hears from</label><output id="out-listen" for="in-listen"></output></div>
+        <input type="range" id="in-listen" min="0.05" max="1" step="0.05">
+        <span class="hint">Share of scientists each policy maker follows directly. Policy makers start sceptical, uniform on (0, 0.5).</span>
+      </div>
+      <div class="field">
+        <span class="label">Funded propagandist</span>
+        <div class="pair">
+          <div class="field"><div class="field-top"><label class="hint" for="in-res">pulls / round</label><output id="out-res" for="in-res"></output></div><input type="range" id="in-res" min="0" max="4" step="1"></div>
+          <div class="field"><div class="field-top"><label class="hint" for="in-study">study size</label><output id="out-study" for="in-study"></output></div><input type="range" id="in-study" min="0" max="5" step="1"></div>
+        </div>
+      </div>
+      <label class="field" style="grid-template-columns:auto 1fr; align-items:center; gap:8px">
+        <input type="checkbox" id="in-double" checked style="accent-color:var(--accent)">
+        <span class="label" style="font-size:13.5px">Count a forwarded result again even if heard directly (the paper’s default)</span>
+      </label>
+      <div class="field">
+        <label for="in-seed">Random seed</label>
+        <div style="display:flex; gap:6px">
+          <input type="number" id="in-seed" min="0" step="1" value="1">
+          <button class="btn small" type="button" id="btn-reseed">New</button>
+        </div>
+        <p class="note" id="find-note" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <span class="label">Belief chart scale</span>
+        <div class="chips" role="group" aria-label="Belief chart scale">
+          <button class="chip" type="button" data-scale="credence" aria-pressed="true">Credence</button>
+          <button class="chip" type="button" data-scale="logodds" aria-pressed="false">Log-odds</button>
+        </div>
+      </div>
+    </aside>
+    <div class="arena">
+      <div class="transport" role="toolbar" aria-label="Playback">
+        <div class="group">
+          <button class="btn primary" type="button" id="btn-play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Play</span></button>
+          <button class="btn" type="button" id="btn-step">Step</button>
+          <button class="btn" type="button" id="btn-reset">Restart</button>
+        </div>
+        <div class="speed">
+          <label for="in-speed">Speed</label>
+          <input type="range" id="in-speed" min="0" max="7" step="1">
+          <output id="out-speed" for="in-speed"></output>
+        </div>
+        <div class="round-big">Round <b id="round">0</b></div>
+        <span class="kbd-hint"><kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>R</kbd> restart</span>
+      </div>
+      <div class="panels" id="panels"></div>
+      <div class="legend" aria-label="Legend">
+        <div class="item scale">
+          <div class="scale-bar"></div>
+          <div class="scale-ticks"><span>0 · A better</span><span>0.5</span><span>1 · B</span></div>
+        </div>
+        <div class="item"><span class="glyph filled"></span>Scientist testing B</div>
+        <div class="item"><span class="glyph hollow"></span>Scientist doing A</div>
+        <div class="item"><span class="glyph filled square"></span>Policy maker</div>
+        <div class="item"><span class="glyph diamond"></span>Propagandist</div>
+        <div class="item"><span class="edge-key dotted"></span>Who a policy maker follows</div>
+        <div class="item"><span class="edge-key anti"></span>Propaganda channel</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="model-h">
+    <div class="section-head">
+      <span class="eyebrow">The model</span>
+      <h2 id="model-h">Misleading with true results</h2>
+      <p>The scientists are Model 1’s Bayesian agents: B succeeds with probability 0.5 + ε, they test it while they think it is better, and they stop at a consensus. Three new roles sit outside their network.</p>
+    </div>
+    <div class="model-grid">
+      <div class="prose">
+        <h3>Policy makers</h3>
+        <p>They start sceptical about B, with credence uniform on (0, 0.5). They follow a fixed set of scientists and update by Bayes’ rule on those scientists’ results. They never act on the world themselves, so they cannot generate evidence that would correct them.</p>
+        <h3>Selective sharing</h3>
+        <p>Every round, the propagandist looks at all the scientists’ results and forwards to every policy maker the ones that came out in A’s favour, fewer than <i>n</i>/2 successes. Nothing is faked. But a policy maker who hears 5 scientists directly and 6 forwarded failures is updating on a sample in which B looks worse than it is. Each result is real; the <b>collection</b> is biased.</p>
+        <p>The outcome is a tug of war, and the paper derives its expected direction. Scientists’ results pull the public up and the forwarded results pull it down. More scientists heard directly, bigger studies (larger <i>n</i>) and a bigger true effect (larger ε) all favour the scientists. A long scientific debate favours the propagandist, who gets more rounds to work. So <b>the Zollman effect cuts the other way for the public</b>: a slow, sparse network that is good for the scientists’ own reliability gives the propagandist more time.</p>
+        <h3>Funded research</h3>
+        <p>The propagandist can also run honest studies of its own and publish only the ones that favour A. With a fixed budget it should run many small studies, because small studies give more spurious results. The paper’s policy lesson is the mirror image: a community that runs fewer, bigger studies gives the propagandist less material.</p>
+        <h3>Journalists</h3>
+        <p>Even without a propagandist, curation matters. A journalist who reports one result for each side every round, in the spirit of the old US “Fairness Doctrine”, never misleads anyone for good, but slows the public down relative to two random results or everything.</p>
+      </div>
+      <div class="aside-card">
+        <h3>Choices made here</h3>
+        <ul>
+          <li>Each policy maker follows a random set of scientists, fixed for the run; the paper reports that the pattern did not matter.</li>
+          <li>Results with exactly <i>n</i>/2 successes favour neither side and are not forwarded.</li>
+          <li>Ten policy makers by default. They do not affect one another, so their number only changes how much the average wobbles.</li>
+          <li>Runs where the scientists themselves settle on A are set aside, as in the paper; the experiment reports how often that happens.</li>
+        </ul>
+        <h3>Things to try</h3>
+        <ul>
+          <li>Slide “Each hears from” up. How many scientists must the public follow to resist?</li>
+          <li>Raise n to 100: few results favour A, and the propagandist starves.</li>
+          <li>Funded small studies: change the study size and watch the forwarded count.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="exp-h">
+    <div class="section-head">
+      <span class="eyebrow">Monte Carlo experiment</span>
+      <h2 id="exp-h">Where does the public end up?</h2>
+      <p>Each point is the average policy-maker credence in B at the moment the scientists reach a correct consensus, over many independent runs.</p>
+    </div>
+    <div id="exp"></div>
+  </section>
+
+  <section class="section" aria-labelledby="read-h">
+    <div class="section-head">
+      <span class="eyebrow">Sources and checks</span>
+      <h2 id="read-h">Where this comes from</h2>
+    </div>
+    <ul class="refs">
+      <li><b>Weatherall, J. O., O’Connor, C. &amp; Bruner, J. (2020). <a href="https://arxiv.org/abs/1801.01239">How to beat science and influence people: policymakers and propaganda in epistemic networks.</a></b> <i>BJPS</i> 71(4). <span class="why">All three treatments and the figures behind the presets.</span></li>
+      <li><b>Oreskes, N. &amp; Conway, E. M. (2010). <i>Merchants of Doubt</i>.</b> <span class="why">The historical case the model is built around.</span></li>
+      <li><b>How close the reproduction is.</b> <span class="why">The study-size effects (Figs. 4 and 7) and the funded propagandist (Fig. 6) match the paper to within about 0.1. Without a propagandist the match is close (0.87 when following one scientist out of 20). With selective sharing, our policy makers resist better when they follow most scientists: at 100% we get about 0.9 where Fig. 2 shows about 0.4. The paper’s own expected-value analysis (its appendix) predicts the scientists winning in that setting, so we have kept the model as described rather than tune it.</span></li>
+    </ul>
+  </section>
+  <footer>Part of the network epistemology testbed.</footer>
+</div>
+
+<script src="lib/rng.js"></script>
+<script src="lib/networks.js"></script>
+<script src="lib/charts.js"></script>
+<script src="lib/views.js"></script>
+<script src="lib/lab.js"></script>
+<script src="lib/sweep.js"></script>
+<script src="lib/experiment-ui.js"></script>
+<script src="models/zollman.js"></script>
+<script src="models/propaganda.js"></script>
+<script src="models/beta-bandit.js"></script>
+<script src="models/experiments.js"></script>
+<script src="data/propaganda-presets.js"></script>
+<script src="app/propaganda-app.js"></script>
+<script>
+(function () {
+  const { experimentUI: XUI, experiments: EX, sweep: SW } = window.NET;
+  const modes = [['none', 'No propagandist'], ['selective', 'Selective sharing'], ['production', 'Funded studies'], ['all', 'Journalist: all'], ['random', 'Journalist: random two'], ['fair', 'Journalist: “fair”']];
+  const f2 = (v) => (v == null ? '–' : v.toFixed(2));
+  XUI.mount(document.getElementById('exp'), {
+    variables: {
+      mode: { name: 'intervention', label: 'Intervention', kind: 'enum', options: modes, defaults: 'none, selective' },
+      net: { name: 'network', label: 'Scientists’ network', kind: 'enum', options: [['cycle', 'Cycle'], ['complete', 'Complete'], ['wheel', 'Wheel']], defaults: 'cycle, complete' },
+      K: { name: 'K', label: 'Scientists', kind: 'int', min: 2, max: 100, defaults: '4, 6, 10, 20, 50' },
+      eps: { name: 'ε', label: 'Advantage of B, ε', kind: 'num', min: 0.001, max: 0.49, log: true, defaults: '0.01, 0.05, 0.1, 0.2' },
+      n: { name: 'n', label: 'Trials per study, n', kind: 'int', min: 1, max: 10000, log: true, defaults: '1, 5, 10, 50, 100' },
+      listenShare: { name: 'share heard', label: 'Share of scientists each policy maker hears', kind: 'num', min: 0.01, max: 1, defaults: '0.1, 0.25, 0.5, 0.75, 1' },
+      resources: { name: 'resources', label: 'Propagandist pulls per round', kind: 'int', min: 1, max: 10000, defaults: '10, 20, 50, 100' },
+      studyN: { name: 'study size', label: 'Propagandist study size', kind: 'int', min: 1, max: 1000, log: true, defaults: '1, 2, 5, 10, 20, 50' },
+      doubleCount: { name: 'double counting', label: 'Count forwarded results twice', kind: 'enum', options: [['yes', 'Double counting'], ['no', 'No double counting']], defaults: 'yes, no' },
+    },
+    varyKeys: ['listenShare', 'eps', 'n', 'K', 'resources', 'studyN', 'mode', 'net'],
+    seriesKeys: ['mode', 'net', 'doubleCount', 'K', 'eps', 'n'],
+    fixed: { mode: 'selective', net: 'cycle', K: 20, eps: 0.05, n: 10, listenShare: 0.5, resources: 50, studyN: 10, doubleCount: 'yes' },
+    metrics: {
+      pm: { label: 'Policy makers’ mean credence in B', sub: 'At the moment the scientists reach a correct consensus.', value: (a) => SW.mean(a, 'pm'), domain: [0, 1], fmt: f2 },
+      sciWrong: { label: 'Share of runs where the scientists settled on A', sub: 'These runs are left out of the policy-maker average.', value: (a) => SW.rate(a, 'incorrect'), prop: 'incorrect', domain: [0, 1], fmt: (v) => (100 * v).toFixed(1) + '%' },
+      rounds: { label: 'Rounds until the scientists settled', sub: 'Mean over all runs. Log scale.', value: (a) => SW.mean(a, 'rounds'), log: true, fmt: (v) => Math.round(v).toLocaleString() },
+    },
+    defaultMetric: 'pm', runs: 300, runOne: EX.propaganda,
+    tableHead: 'public credence · science wrong',
+    tableCell: (a) => `${f2(SW.mean(a, 'pm'))} · ${(100 * (SW.rate(a, 'incorrect') || 0)).toFixed(0)}%`,
+    presets: window.NET.propagandaPresets || {}, defaultPreset: 'fig2',
+  });
+})();
+</script>
+</body>
+</html>

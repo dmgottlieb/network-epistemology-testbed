@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Transient Diversity</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Zollman's 2010 model: beta-belief scientists, and two ways to keep a community from settling too soon, sparse networks and dogmatic priors.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/lab.css">
+<style>.panels .panel { grid-row: span 7; }</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Network epistemology testbed</a><span aria-hidden="true">/</span><span>Model 3 · Beta beliefs</span></nav>
+    <h1>Transient Diversity</h1>
+    <p class="lede">Zollman’s 2010 version of the bandit drops a simplification from <a href="zollman.html">Model 1</a>. Neither method’s success rate is known: each scientist holds a full probability distribution over each method’s rate. How firmly they hold it becomes a parameter, a measure of dogmatism. His result is that a community needs <strong>diversity that lasts a while, but not forever</strong>. A sparse network supplies it. So do stubborn priors. Too much of either and the community never agrees.</p>
+  </header>
+
+  <section class="lab" aria-label="Simulation">
+    <aside class="rail" aria-label="Parameters">
+      <div class="field span-all">
+        <p class="group-label">Scenarios</p>
+        <div class="chips" id="scenarios">
+          <button class="chip" type="button" data-scenario="network">Sparse vs. connected</button>
+          <button class="chip" type="button" data-scenario="dogma">Dogmatic but connected</button>
+          <button class="chip" type="button" data-scenario="toomuch">Too much of both</button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-N">Agents</label><output id="out-N" for="in-N">7</output></div>
+        <input type="range" id="in-N" min="3" max="20" step="1">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-gap">Gap between methods</label><output id="out-gap" for="in-gap"></output></div>
+        <input type="range" id="in-gap" min="0" max="5" step="1">
+        <span class="hint" id="hint-gap"></span>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-n">Pulls per round</label><output id="out-n" for="in-n"></output></div>
+        <input type="range" id="in-n" min="0" max="5" step="1">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-rounds">Rounds</label><output id="out-rounds" for="in-rounds"></output></div>
+        <input type="range" id="in-rounds" min="0" max="3" step="1">
+        <span class="hint">The community is judged at the last round, as in the paper (10,000).</span>
+      </div>
+      <div class="field">
+        <label for="in-seed">Random seed</label>
+        <div style="display:flex; gap:6px">
+          <input type="number" id="in-seed" min="0" step="1" value="1">
+          <button class="btn small" type="button" id="btn-reseed">New</button>
+        </div>
+        <span class="hint">Same seed, same priors and same luck in both panels.</span>
+      </div>
+      <div class="field span-all">
+        <button class="btn" type="button" id="btn-find">Find a seed where they differ</button>
+        <p class="note" id="find-note" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <span class="label">Belief chart scale</span>
+        <div class="chips" role="group" aria-label="Belief chart scale">
+          <button class="chip" type="button" data-scale="credence" aria-pressed="true">Credence</button>
+          <button class="chip" type="button" data-scale="logodds" aria-pressed="false">Log-odds</button>
+        </div>
+      </div>
+    </aside>
+    <div class="arena">
+      <div class="transport" role="toolbar" aria-label="Playback">
+        <div class="group">
+          <button class="btn primary" type="button" id="btn-play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Play</span></button>
+          <button class="btn" type="button" id="btn-step">Step</button>
+          <button class="btn" type="button" id="btn-reset">Restart</button>
+        </div>
+        <div class="speed">
+          <label for="in-speed">Speed</label>
+          <input type="range" id="in-speed" min="0" max="8" step="1">
+          <output id="out-speed" for="in-speed"></output>
+        </div>
+        <div class="round-big">Round <b id="round">0</b></div>
+        <span class="kbd-hint"><kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>R</kbd> restart</span>
+      </div>
+      <div class="panels" id="panels"></div>
+      <div class="legend" aria-label="Legend">
+        <div class="item scale">
+          <div class="scale-bar"></div>
+          <div class="scale-ticks"><span>0 · A better</span><span>0.5</span><span>1 · B</span></div>
+        </div>
+        <div class="item"><span class="glyph filled"></span>Using B, the better method</div>
+        <div class="item"><span class="glyph hollow"></span>Using A</div>
+        <div class="item"><span class="edge-key anti" style="border-top-style:solid"></span>Strip: rounds when nobody uses B</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="model-h">
+    <div class="section-head">
+      <span class="eyebrow">The model</span>
+      <h2 id="model-h">Beliefs as distributions</h2>
+      <p>Two methods, A and B, succeed with fixed but unknown probabilities: 0.499 and 0.5 in the paper. Each scientist holds a beta distribution over each method’s success rate. Every round they use the method with the higher expected rate, run it 1,000 times, and see their own and their neighbours’ results.</p>
+    </div>
+    <div class="model-grid">
+      <div class="prose">
+        <h3>Learning by counting</h3>
+        <p>A beta distribution with parameters α and β behaves like a record of α successes and β failures. Its mean is α / (α + β). Updating adds the new successes to α and the failures to β. Priors are drawn at random: in the paper α and β are uniform on [0, 4], about as open-minded as a prior can be. Raising that upper limit to thousands gives agents who behave as if they had already seen thousands of trials. They are <b>dogmatic</b> in the literal sense of being hard to move.</p>
+        <h3>Why both A and B unknown matters</h3>
+        <p>In Model 1, doing A taught you nothing. Here it teaches you about A, and that is enough to create the same trap. A community that has given up on B keeps refining its estimate of A to 0.499 and never collects the evidence that would show B is better. As before, the danger is everyone giving up on B at once. Sparse networks avoid it by letting beliefs drift apart for a while.</p>
+        <h3>Dogmatism as a substitute</h3>
+        <p>Stubborn priors buy the same time a different way: individuals resist a run of bad luck because they discount it against everything their prior says. With dogmatic agents the complete network does as well as the cycle or better, as the second scenario shows. Its agents still hear everything, so they eventually agree. On a cycle, dogmatists hear less, and if time runs out before the evidence overcomes their priors, the community never agrees. Zollman’s point: “transient diversity” needs to be <em>transient</em>.</p>
+        <p class="note">How soon time runs out matters a lot. Judged at 10,000 rounds, as in the paper’s text, our dogmatic cycles still mostly learn; judged at 3,000, they fail as often as Zollman reports, or more. The experiment below has both presets.</p>
+      </div>
+      <div class="aside-card">
+        <h3>Reading the panels</h3>
+        <ul>
+          <li>Colour is the agent’s credence that B beats A, judged from both distributions together.</li>
+          <li>Filled agents are using B this round; hollow ones A.</li>
+          <li>The strip shows how many agents use B each round. Diversity is when it sits between the extremes; red marks rounds when nobody uses B.</li>
+          <li>Hover an agent to see both of its estimates and how many trials each rests on.</li>
+        </ul>
+        <h3>Compared with the earlier models</h3>
+        <p>This is the model Kummerfeld &amp; Zollman’s exploration (on <a href="exchange.html">What Is a Cycle Worth?</a>) and Weatherall &amp; O’Connor’s <a href="conformity.html">conformity</a> model build on. Rosenstock, Bruner &amp; O’Connor found its network effect, like Model 1’s, only appears for hard problems.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="exp-h">
+    <div class="section-head">
+      <span class="eyebrow">Monte Carlo experiment</span>
+      <h2 id="exp-h">How often does every scientist end up preferring B?</h2>
+      <p>A run succeeds if, at the last round, every agent believes B is better. It fails either by settling on A or by never reaching agreement. Each point is hundreds of communities with fresh priors. Runs are long (10,000 rounds of 1,000 pulls), so recomputing in the browser takes a while; lower the runs per point first.</p>
+    </div>
+    <div id="exp"></div>
+    <div class="chart-card" style="margin-top:14px">
+      <h3>How long diversity lasts (Fig. 7)</h3>
+      <p class="sub">Variance of methods in use, p(1 − p) where p is the share using B, averaged over 1,000 runs of 7 agents. Solid: dogmatic priors in [0, 7,000]. Dashed: open priors in [0, 4].</p>
+      <div class="chart-legend" id="div-legend"></div>
+      <div class="chart-box" id="div-chart"></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="read-h">
+    <div class="section-head">
+      <span class="eyebrow">Sources and checks</span>
+      <h2 id="read-h">Where this comes from</h2>
+    </div>
+    <ul class="refs">
+      <li><b>Zollman, K. J. S. (2010). The epistemic benefit of transient diversity.</b> <i>Erkenntnis</i> 72: 17–35. <span class="why">Beta priors on both methods with α, β uniform on [0, max]; methods 0.5 and 0.499; 1,000 pulls a round; success judged at 10,000 rounds; his Figs. 3, 6 and 7 are the presets and the chart above.</span></li>
+      <li><b>Checks.</b> <span class="why">With open priors the Fig. 3 preset gives the cycle rising from 0.67 (4 agents) to 0.95 (11), the wheel from 0.62 (5) to 0.88, and the complete network between 0.50 and 0.64; his Fig. 3 shows about 0.65 → 0.935, 0.64 → 0.86 and 0.55–0.61. For dogmatic priors (Fig. 6) we reproduce the complete network’s gain but, at 10,000 rounds, not the cycle’s collapse; with a 3,000-round horizon the reversal appears. We do not know which horizon his runs used.</span></li>
+    </ul>
+  </section>
+  <footer>Part of the network epistemology testbed. Batches of 60 or more pulls use a normal approximation to the binomial.</footer>
+</div>
+
+<script src="lib/rng.js"></script>
+<script src="lib/networks.js"></script>
+<script src="lib/charts.js"></script>
+<script src="lib/views.js"></script>
+<script src="lib/lab.js"></script>
+<script src="lib/sweep.js"></script>
+<script src="lib/experiment-ui.js"></script>
+<script src="models/beta-bandit.js"></script>
+<script src="models/propaganda.js"></script>
+<script src="models/zollman.js"></script>
+<script src="models/experiments.js"></script>
+<script src="data/diversity-presets.js"></script>
+<script>
+(function () {
+  const GAPS = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05];
+  const PULLS = [10, 50, 100, 200, 500, 1000];
+  const ROUNDS = [1000, 2000, 5000, 10000];
+  const PRIORS = [4, 10, 100, 1000, 2000, 3000, 5000, 7000, 10000];
+  const pct = (v) => (v * 100).toFixed(2).replace(/0$/, '').replace(/\.0$/, '') + '%';
+  window.BETA_PAGE = {
+    bestName: 'B',
+    thirdLabel: 'Off belief',
+    networks: ['cycle', 'wheel', 'complete', 'line', 'star', 'grid', 'ringLattice', 'clusters', 'smallWorld'],
+    panelParam: { label: 'Prior strength: α, β up to', steps: PRIORS, format: (v) => v.toLocaleString() },
+    rail: [['in-N', 'N'], ['in-gap', 'gap', GAPS, (v) => v], ['in-n', 'n', PULLS, (v) => v.toLocaleString()], ['in-rounds', 'rounds', ROUNDS, (v) => v.toLocaleString()]],
+    hint: (S) => { document.getElementById('hint-gap').textContent = `B succeeds ${pct(0.5)} of the time, A ${pct(0.5 - S.gap)}. Both are unknown to the agents.`; },
+    defaults: {
+      shared: { N: 7, gap: 0.001, n: 1000, rounds: 10000, seed: 1 },
+      a: { type: 'complete', value: 4 }, b: { type: 'cycle', value: 4 }, speed: 7,
+      note: 'Zollman’s setting: 7 agents, open priors. Press Play at top speed; then try Find a seed where they differ.',
+    },
+    scenarios: {
+      network: { shared: { N: 7, gap: 0.001, n: 1000, rounds: 10000 }, a: ['complete', 4], b: ['cycle', 4], note: 'Open priors in [0, 4]. The cycle keeps more agents on each method for longer.' },
+      dogma: { shared: { N: 7, gap: 0.001, n: 1000, rounds: 10000 }, a: ['complete', 7000], b: ['cycle', 4], note: 'Left: complete network of dogmatists. Right: open-minded cycle. Both keep diversity alive, by different means.' },
+      toomuch: { shared: { N: 7, gap: 0.001, n: 1000, rounds: 10000 }, a: ['complete', 7000], b: ['cycle', 7000], note: 'Dogmatists on a cycle hear too little to overcome their priors in time.' },
+    },
+    runOptions: (S, pp) => ({ probs: [0.5 - S.gap, 0.5], n: S.n, k: 0, priorMax: pp }),
+    blurb: (pp) => pp <= 4 ? 'Open-minded priors: a single round of results can change an agent’s mind.' : `Priors worth up to ${pp.toLocaleString()} imagined trials per parameter: hard to move.`,
+    armName: (j) => (j === 1 ? 'B' : 'A'),
+    status(run) {
+      if (run.status === 'running') {
+        const s = run.bestShareHistory[run.bestShareHistory.length - 1], N = run.graph.n;
+        if (run.round === 0) return ['running', 'Ready'];
+        return ['running', s === N ? 'Running · all on B' : s === 0 ? 'Running · all on A' : 'Running · diverse'];
+      }
+      const o = run.outcome();
+      if (o.learned) return ['correct', '✓ Everyone prefers B', 'Every agent believes B is the better method.'];
+      let allA = true;
+      for (let i = 0; i < run.graph.n; i++) if (run.believed(i) === run.best) allA = false;
+      return allA ? ['incorrect', '✕ Everyone prefers A', 'Every agent believes A is better.'] : ['timeout', 'No agreement', 'Agents still disagree at the last round.'];
+    },
+    verdict(run) {
+      const o = run.outcome();
+      if (o.learned) return 'learns that B is better';
+      for (let i = 0; i < run.graph.n; i++) if (run.believed(i) === run.best) return 'never agrees';
+      return 'settles on A';
+    },
+  };
+})();
+</script>
+<script src="app/beta-lab.js"></script>
+<script>
+(function () {
+  const { experimentUI: XUI, experiments: EX, sweep: SW, networks: NETS, charts: CH } = window.NET;
+  const P = window.NET.diversityPresets || {};
+  const nets = ['cycle', 'wheel', 'complete', 'line', 'star', 'grid', 'ringLattice', 'clusters'];
+  const pct = (v) => (v == null ? '–' : (100 * v).toFixed(1) + '%');
+  const presets = {};
+  for (const [k, p] of Object.entries(P)) if (!k.startsWith('_')) presets[k] = p;
+  XUI.mount(document.getElementById('exp'), {
+    variables: {
+      N: { name: 'N', label: 'Number of agents', kind: 'int', min: 2, max: 30, defaults: '3, 5, 7, 9, 11' },
+      net: { name: 'network', label: 'Network', kind: 'enum', options: nets.map((t) => [t, NETS.TYPES[t].label]), defaults: 'cycle, wheel, complete' },
+      priorMax: { name: 'prior max', label: 'Prior strength (α, β up to)', kind: 'num', min: 0.5, max: 100000, log: true, defaults: '4, 100, 1000, 3000, 7000, 10000' },
+      gap: { name: 'gap', label: 'Gap between methods', kind: 'num', min: 0.0001, max: 0.4, log: true, defaults: '0.001, 0.005, 0.02' },
+      n: { name: 'n', label: 'Pulls per round', kind: 'int', min: 1, max: 10000, log: true, defaults: '10, 100, 1000' },
+      rounds: { name: 'rounds', label: 'Rounds', kind: 'int', min: 10, max: 100000, log: true, defaults: '1000, 10000' },
+    },
+    varyKeys: ['N', 'priorMax', 'gap', 'n', 'rounds', 'net'],
+    seriesKeys: ['net', 'priorMax', 'N', 'gap', 'n', 'rounds'],
+    fixed: { N: 7, net: 'cycle', priorMax: 4, gap: 0.001, n: 1000, rounds: 10000 },
+    metrics: {
+      learned: { label: 'Share of runs where everyone prefers B', sub: 'Every agent believes B is better at the last round.', value: (a) => SW.rate(a, 'learned'), prop: 'learned', auto: true, fmt: pct },
+      wrong: { label: 'Share settling on A', sub: 'Every agent believes A is better.', value: (a) => SW.rate(a, 'wrong'), prop: 'wrong', fmt: pct },
+      split: { label: 'Share never agreeing', sub: 'Agents still disagree at the last round.', value: (a) => SW.rate(a, 'split'), prop: 'split', fmt: pct },
+    },
+    defaultMetric: 'learned', runs: 100, runOne: EX.diversity,
+    tableHead: 'B · A · split',
+    tableCell: (a) => `${pct(SW.rate(a, 'learned'))} · ${pct(SW.rate(a, 'wrong'))} · ${pct(SW.rate(a, 'split'))}`,
+    presets, defaultPreset: 'fig3',
+  });
+  // Fig. 7 curves
+  const C = P._diversity;
+  if (C) {
+    const series = [];
+    const colors = { cycle: 'var(--s2)', wheel: 'var(--s3)', complete: 'var(--s1)' };
+    for (const tag of ['high', 'low']) for (const net of ['cycle', 'wheel', 'complete']) {
+      const ys = C[`${tag}-${net}`];
+      if (!ys) continue;
+      series.push({ key: tag + net, label: `${tag === 'high' ? 'Dogmatic' : 'Open'} · ${NETS.TYPES[net].label}`, color: colors[net], ys: ys.filter((_, i) => i % 5 === 0), dash: tag === 'low' });
+    }
+    const xs = C['low-cycle'].map((_, i) => i + 1).filter((_, i) => i % 5 === 0);
+    CH.legend(document.getElementById('div-legend'), series);
+    CH.lineChart(document.getElementById('div-chart'), {
+      xs, xLabel: 'Round', xName: 'round', yDomain: [0, 0.25], yFormat: (v) => v.toFixed(2), series, height: 260,
+      ariaLabel: 'Diversity of methods over time', valueText: (s, i) => s.ys[i].toFixed(3), markers: false,
+    });
+  }
+})();
+</script>
+</body>
+</html>
