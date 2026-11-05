@@ -186,17 +186,45 @@
     </div>
   </section>
 
+  <section class="section" id="published" aria-labelledby="kz-h">
+    <div class="section-head">
+      <span class="eyebrow">The published version</span>
+      <h2 id="kz-h">Kummerfeld &amp; Zollman: when exploration has a price</h2>
+      <p>The idea that exploration and sparse networks do the same job comes from Kummerfeld and Zollman (2016). Their model differs from the one above in three ways that matter here. Agents are ε-greedy averagers rather than Bayesians. Each scientist pulls one arm per round for 50 rounds: a safe arm that always pays 0, or a risky one paying a draw with mean 1 and a large spread. And exploration goes both ways, so a scientist sure of the risky arm still sometimes pulls the safe one. That makes exploration <b>costly</b>, and performance counts every pull, so there is a best amount of it.</p>
+    </div>
+    <div class="two-col">
+      <div class="chart-card">
+        <div class="field-top" style="align-items:center; flex-wrap:wrap">
+          <h3>Payoff per pull when everyone explores at rate ε</h3>
+          <div class="seg" role="group" aria-label="Community size" id="kz-sizes"></div>
+        </div>
+        <p class="sub" id="kz-sub">Ring vs. complete network, 50 rounds. Their Fig. 6 shows the 8-agent case.</p>
+        <div class="chart-legend" id="kz-legend"></div>
+        <div class="chart-box" id="kz-chart"></div>
+        <div class="stat-row" id="kz-stats" style="margin-top:8px"></div>
+      </div>
+      <div class="prose">
+        <h3>The same substitution, priced differently</h3>
+        <p>With no exploration the ring beats the complete network (0.54 against 0.41 for 8 agents), which is the Zollman effect. As exploration rises, the complete network gains faster and overtakes the ring at about ε ≈ <b id="kz-cross">0.07</b>. In the paper’s words, with low ε “experimentation is maintained by the structure of the community”. The ring’s best ε is <b>lower</b> than the complete network’s because the ring already supplies some of the diversity that exploration would.</p>
+        <p>The natural match falls out of the chart. A ring with no exploration does as well as a complete network exploring at ε ≈ <b id="kz-match">0.03</b>. At their respective optima, the ring needs about <b id="kz-gap">0.04</b> less exploration, but it ends up <b>worse</b>, because sparse communication also slows the spread of good news. Once exploration is set well, connection is better, as in the exchange-rate analysis above.</p>
+        <h3>Why the cheap substitute might still matter</h3>
+        <p>Kummerfeld and Zollman’s main result is about who chooses ε. If each scientist picks their own exploration rate to maximise their own payoff, everyone free-rides on others’ exploring. With 8 fully connected scientists the stable choice (a Nash equilibrium) is about ε = 0.06, against a community optimum near 0.18. That sits at the edge of the region where the ring does as well as the complete network, and the paper notes that at their respective equilibria the two networks do equally well. Left to themselves, scientists under-explore, which is the condition under which a sparse network’s built-in diversity earns its keep. The paper’s own recommendation is that institutions should encourage exploration directly.</p>
+        <p class="note">Reconstructed details, chosen because they reproduce the paper’s Fig. 6: the risky arm’s standard deviation is 9 (the text says variance 9, but its figures match sd 9, as Rosenstock et al. also report), and an arm an agent has heard nothing about counts as the better one.</p>
+      </div>
+    </div>
+  </section>
+
   <section class="section" aria-labelledby="caveat-h">
     <div class="section-head">
       <span class="eyebrow">Caveats</span>
       <h2 id="caveat-h">What this does and doesn’t show</h2>
     </div>
     <ul class="refs">
-      <li><b>The exploration rule is ours.</b> <span class="why">It follows the spirit of Kummerfeld and Zollman’s (2016) ε-greedy agents, who sometimes try the action they think is worse. Only doubters explore here, because exploring A teaches nothing when A’s rate is known. This page is an analysis built on the Zollman model, not a published result.</span></li>
-      <li><b>Exploration is nearly free in this model.</b> <span class="why">An exploratory batch costs nothing except that, in a real setting, the explorer forgoes what it believes is the better action. Here B really is better, so exploring even pays. Real exploration has costs, and a fuller comparison would price them.</span></li>
+      <li><b>The exploration rule in the top sections is ours.</b> <span class="why">It follows the spirit of Kummerfeld and Zollman’s (2016) ε-greedy agents, who sometimes try the action they think is worse. Only doubters explore, because exploring A teaches nothing when A’s rate is known. The exchange rates above are an analysis built on the Zollman model, not a published result; the Kummerfeld &amp; Zollman section is their published model.</span></li>
+      <li><b>Exploration is nearly free in the Zollman-based analysis.</b> <span class="why">Doubters who explore are testing the action that really is better, so exploring even pays. The Kummerfeld &amp; Zollman section prices exploration properly: there, exploring means sometimes abandoning the arm you believe is best.</span></li>
       <li><b>Reliability is scored as in the Zollman page:</b> <span class="why">a run succeeds if everyone exceeds 0.99 within the horizon. The networks without exploration are scored the same way (their own runs end long before 10,000 rounds).</span></li>
       <li><b>Random graphs are averaged over draws.</b> <span class="why">The small world and scale-free entries draw a new graph each run. A sparse Erdős–Rényi graph is left out because at this size it is often disconnected, and a disconnected community can never reach a full consensus.</span></li>
-      <li><b>Sources.</b> <span class="why">Zollman (2007); Rosenstock, Bruner &amp; O’Connor (2017), <a href="https://philsci-archive.pitt.edu/11900/">In epistemic networks, is less really more?</a>, whose §4 discusses Kummerfeld &amp; Zollman’s exploration results. Precomputed with tools/precompute-exchange.js: 20,000 runs per network and per budget at the 10,000-round horizon.</span></li>
+      <li><b>Sources.</b> <span class="why">Zollman (2007); Kummerfeld, E. &amp; Zollman, K. J. S. (2016), Conservatism and the scientific state of nature, <i>BJPS</i> 67(4), Figs. 2 and 6; Rosenstock, Bruner &amp; O’Connor (2017), <a href="https://philsci-archive.pitt.edu/11900/">In epistemic networks, is less really more?</a> Precomputed with tools/precompute-exchange.js: 20,000 runs per network and per budget at the 10,000-round horizon.</span></li>
     </ul>
   </section>
 
@@ -208,7 +236,10 @@
 <script src="models/zollman.js"></script>
 <script src="lib/charts.js"></script>
 <script src="lib/views.js"></script>
+<script src="models/kummerfeld-zollman.js"></script>
 <script src="data/exchange-presets.js"></script>
+<script src="data/kz-presets.js"></script>
 <script src="app/exchange-app.js"></script>
+<script src="app/kz-section.js"></script>
 </body>
 </html>

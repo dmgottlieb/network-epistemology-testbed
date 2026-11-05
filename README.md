@@ -82,6 +82,13 @@ network with none.
   only 2.7% of the time and never escapes. The page marks agents who test B
   against the community's pooled evidence: deliberate explorers in the complete
   network, uninformed agents in the cycle.
+- **The published version.** Kummerfeld & Zollman's (2016) model
+  (`models/kummerfeld-zollman.js`): ε-greedy averaging agents, 50 rounds of one
+  pull, a safe arm paying 0 and a risky arm ~ N(1, sd 9). Reproduces their
+  Fig. 6 (8 agents: complete 0.41 → peak ≈ 0.65 near ε = 0.17; ring 0.54 → peak
+  ≈ 0.61 near ε = 0.13; crossing near ε = 0.07). Two details are reconstructed
+  to match that figure: the risky arm's sd is 9 (the text says variance 9),
+  and an arm an agent has no results for counts as the better one.
 
 ## Layout
 
@@ -94,6 +101,7 @@ css/lab.css                 shared page styles
 models/zollman.js           model 1 engine, with optional exploration (no DOM; runs in Node)
 models/polarization.js      model 2 engine
 models/polarization-sweep.js  parameter sweeps shared by page and precompute script
+models/kummerfeld-zollman.js  Kummerfeld & Zollman (2016) epsilon-greedy model
 lib/rng.js                  seeded PRNG, binomial sampler
 lib/networks.js             graph generators and layouts
 lib/views.js                canvas network / trajectory / strip views
@@ -113,7 +121,8 @@ node --test tests/*.test.js
 
 The tests check the Bayes and Jeffrey updates, network construction, the
 sampler, the polarization classifier and the exploration option. They also
-reproduce O'Connor & Weatherall's Fig. 2 polarization rates and the published
+reproduce O'Connor & Weatherall's Fig. 2 polarization rates, the endpoints of
+Kummerfeld & Zollman's Fig. 6, and the published
 Zollman headline result: at N = 10, ε = 0.001, n = 1,000 the
 complete network reaches the right consensus about 89% of the time and the
 cycle about 97%. The precomputed presets also match Rosenstock et al.’s reported
