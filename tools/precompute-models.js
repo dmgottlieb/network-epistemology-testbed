@@ -64,6 +64,20 @@ const PAGES = {
   },
 };
 
+PAGES.trust = {
+  fn: EX.trust,
+  base: { N: 100, scenario: 'credulous', V: 1, turnover: 0, problems: 100, rounds: 100 },
+  presets: {
+    credulous: { title: 'Credulous agents', metric: 'last', vary: 'V', xs: [0, 0.25, 0.5, 0.75, 1], seriesBy: 'N', series: [5, 50, 100], fixed: {}, runs: R('TRUST_RUNS', 150),
+      note: 'Agents always reinforce a source that was right; vigilance V is how often they refuse to reinforce one that was wrong. Pozzi: 0.64 (5 agents) and 0.24 (100) with no vigilance; 0.85 for 100 with full vigilance.' },
+    sceptical: { title: 'Sceptical agents', metric: 'last', vary: 'V', xs: [0, 0.25, 0.5, 0.75, 1], seriesBy: 'N', series: [5, 50, 100], fixed: { scenario: 'sceptical' }, runs: R('TRUST_RUNS', 150),
+      note: 'Agents never reinforce a source that was wrong; vigilance V is how often they do reinforce one that was right. Pozzi: 0.52 (5) and 0.61 (100) with V = 0; 0.78 and 0.86 with V = 1.' },
+    turnover: { title: 'With turnover', metric: 'last', vary: 'V', xs: [0, 0.25, 0.5, 0.75, 1], seriesBy: 'scenario', series: ['credulous', 'sceptical'], fixed: { turnover: 0.05 }, runs: R('TRUST_RUNS', 150),
+      note: '100 agents; before each problem every agent is replaced with probability 0.05. Pozzi: in sceptical networks partial vigilance (0.79 at V = 0.5) does about as well as full (0.74).' },
+  },
+};
+const TR = require('../models/trust.js');
+
 const only = process.argv[2];
 const onlyPreset = process.argv[3];
 for (const [page, def] of Object.entries(PAGES)) {
@@ -77,6 +91,19 @@ for (const [page, def] of Object.entries(PAGES)) {
     const cfg = Object.assign({}, p, { fixed: Object.assign({}, def.base, p.fixed) });
     out[key] = Object.assign({}, cfg, { acc: SW.runAll(cfg, 20261106 + key.length, def.fn) });
     console.error(`${page} ${key}: ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  }
+  if (page === 'trust' && !onlyPreset) {
+    // Pozzi Figs. 1-2: knowledge over successive problems, 100 agents
+    const curves = {};
+    for (const sc of ['credulous', 'sceptical']) for (const V of [0, 0.5, 1]) {
+      const sum = new Float64Array(100);
+      const rand = rng.mulberry32(rng.mix(sc.length, V * 10));
+      const runs = R('CURVE_RUNS', 100);
+      for (let r = 0; r < runs; r++) TR.simulate({ N: 100, scenario: sc, V }, rand).forEach((v, i) => (sum[i] += v));
+      curves[`${sc}-${V}`] = Array.from(sum, (v) => +(v / runs).toFixed(4));
+    }
+    out._curves = curves;
+    console.error(`${page} curves: ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   }
   if (page === 'diversity' && !onlyPreset) {
     // Zollman Fig. 7: diversity of actions over the first rounds

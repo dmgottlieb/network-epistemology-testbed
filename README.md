@@ -128,6 +128,18 @@ group's exploration rate, estimated with common random numbers; symmetric Nash
 equilibria at 0.24, 0.13, 0.08, 0.05 for 2, 4, 6, 8 connected scientists
 (paper: 0.24, 0.13, 0.085, 0.06) against community optima near 0.32–0.18.
 
+### 7. Learning whom to trust (`trust.html`)
+
+Barrett, Skyrms & Mohseni's (2019) self-assembling networks with Pozzi's
+(2025) vigilance parameter. Each agent has an urn of balls for nature, itself
+and every other agent; it draws one each round, observes nature or adopts the
+chosen agent's belief, and adds a ball when that worked (credulous agents also
+credit wrong sources with probability 1 − V; sceptical agents credit right ones
+only with probability V). Over 100 problems of 100 rounds, collective knowledge
+matches Pozzi's stable-network results within about 0.02 (e.g. credulous,
+V = 0: 0.64 / 0.26 for 5 / 100 agents vs. 0.64 / 0.24). Turnover is applied
+once per problem; per round, every community collapses.
+
 ## Layout
 
 ```
@@ -139,6 +151,7 @@ diversity.html              model 3 page          app/beta-lab.js (shared with c
 conformity.html             model 4 page          app/beta-lab.js
 propaganda.html             model 5 page          app/propaganda-app.js
 freerider.html              model 6 page          app/freerider-app.js
+trust.html                  model 7 page          app/trust-app.js
 css/lab.css                 shared page styles
 models/zollman.js           model 1 engine, with optional exploration (no DOM; runs in Node)
 models/polarization.js      model 2 engine
@@ -146,7 +159,8 @@ models/polarization-sweep.js  parameter sweeps shared by page and precompute scr
 models/kummerfeld-zollman.js  Kummerfeld & Zollman (2016) epsilon-greedy model and hero game
 models/beta-bandit.js       beta-belief agents (Zollman 2010; conformity)
 models/propaganda.js        policy makers, propagandist, journalists
-models/experiments.js       one-run functions for the sweeps on models 3-5
+models/trust.js             urn reinforcement learning of whom to consult
+models/experiments.js       one-run functions for the sweeps on models 3-5 and 7
 lib/sweep.js, lib/experiment-ui.js, lib/lab.js   generic sweep, experiment panel, playback
 lib/rng.js                  seeded PRNG, binomial sampler
 lib/networks.js             graph generators and layouts
@@ -187,4 +201,6 @@ normal approximation to the binomial; smaller batches are drawn exactly.
 - Kummerfeld, E. & Zollman, K. J. S. (2016). Conservatism and the scientific state of nature. *British Journal for the Philosophy of Science* 67(4).
 - Weatherall, J. O., O'Connor, C. & Bruner, J. (2020). How to beat science and influence people. *BJPS* 71(4). <https://arxiv.org/abs/1801.01239>
 - Weatherall, J. O. & O'Connor, C. (2021). Conformity in scientific networks. *Synthese* 198. <https://arxiv.org/abs/1803.09905>
+- Barrett, J. A., Skyrms, B. & Mohseni, A. (2019). Self-assembling networks. *BJPS* 70(1).
+- Pozzi, M. (2025). From individual trust to collective knowledge: modeling epistemic vigilance. CIFMA 2025. <https://cifma.github.io/Papers-2025/S4-5-Pozzi.pdf>
 - Weisberg, J. (2020). Blog series on the Zollman effect and polarization: <https://jonathanweisberg.org/post/zollman/>, code at <https://github.com/jweisber/sep-sen>

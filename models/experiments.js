@@ -12,6 +12,7 @@
   const NETS = isNode ? require('../lib/networks.js') : root.NET.networks;
   const BB = isNode ? require('./beta-bandit.js') : root.NET.betaBandit;
   const PR = isNode ? require('./propaganda.js') : root.NET.propaganda;
+  const TR = isNode ? require('./trust.js') : root.NET.trust;
 
   function graphFor(type, N, cache, rand, params) {
     const def = NETS.TYPES[type];
@@ -54,7 +55,13 @@
     return { outcome: res.outcome, pm: res.outcome === 'correct' ? res.pmMean : null, rounds: res.rounds };
   }
 
-  const api = { diversity, conformity, propaganda, graphFor };
+  // Barrett, Skyrms & Mohseni / Pozzi: collective knowledge on the last problem
+  function trust(p, rand) {
+    const k = TR.simulate({ N: p.N, scenario: p.scenario, V: p.V, turnover: p.turnover, problems: p.problems, rounds: p.rounds }, rand);
+    return { last: k[k.length - 1], mean: k.reduce((a, b) => a + b, 0) / k.length, first: k[0] };
+  }
+
+  const api = { diversity, conformity, propaganda, trust, graphFor };
   if (isNode) module.exports = api;
   else {
     root.NET = root.NET || {};

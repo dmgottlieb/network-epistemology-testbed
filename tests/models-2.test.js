@@ -102,3 +102,30 @@ test('free-rider episode stepper matches the fast path', () => {
   while (ep.step());
   assert.deepEqual(Array.from(ep.pulls), Array.from(fast));
 });
+
+// Pozzi (2025), 5 agents, 100 problems of 100 rounds: credulous without
+// vigilance ~0.64; sceptical with full vigilance ~0.78.
+test('trust: reproduces Pozzi’s small-group results', () => {
+  const TR = require('../models/trust.js');
+  const mean = (opts) => {
+    const rand = rng.mulberry32(31);
+    let s = 0;
+    for (let r = 0; r < 300; r++) { const k = TR.simulate(Object.assign({ N: 5 }, opts), rand); s += k[k.length - 1]; }
+    return s / 300;
+  };
+  const cred = mean({ scenario: 'credulous', V: 0 }), scep = mean({ scenario: 'sceptical', V: 1 });
+  console.log(`  credulous V=0 ${cred.toFixed(3)}  sceptical V=1 ${scep.toFixed(3)}`);
+  assert.ok(Math.abs(cred - 0.64) < 0.04);
+  assert.ok(Math.abs(scep - 0.78) < 0.04);
+});
+
+test('trust urn samples in proportion to weights', () => {
+  const TR = require('../models/trust.js');
+  const u = new TR.Urn(4);
+  u.reset();
+  u.add(2, 6); // weights 1, 1, 7, 1
+  const counts = [0, 0, 0, 0];
+  const rand = rng.mulberry32(2);
+  for (let i = 0; i < 20000; i++) counts[u.sample(rand())]++;
+  assert.ok(Math.abs(counts[2] / 20000 - 0.7) < 0.02 && Math.abs(counts[0] / 20000 - 0.1) < 0.01);
+});

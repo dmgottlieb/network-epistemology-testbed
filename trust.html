@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Learning Whom to Trust</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Self-assembling epistemic networks: agents learn by reinforcement whom to consult, after Barrett, Skyrms and Mohseni (2019) and Pozzi (2025).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/lab.css">
+<style>.panels .panel { grid-row: span 5; } .glyph.diamond { border-radius: 2px; transform: rotate(45deg) scale(0.8); background: var(--good); }</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Network epistemology testbed</a><span aria-hidden="true">/</span><span>Model 7 · Self-assembling networks</span></nav>
+    <h1>Learning Whom to Trust</h1>
+    <p class="lede">Every model so far fixed the network in advance. Here nobody starts out connected. Each agent can look at the world itself (the diamond) or ask anyone else, and learns by reinforcement who has been worth asking. Barrett, Skyrms and Mohseni (2019) showed that networks self-assemble this way, with the unreliable deferring to the reliable. Pozzi (2025) adds <strong>vigilance</strong>: whether agents keep crediting a source that turned out wrong. Both panels have the same agents, with the same reliabilities, and the same luck.</p>
+  </header>
+
+  <section class="lab" aria-label="Simulation">
+    <aside class="rail" aria-label="Parameters">
+      <div class="field span-all">
+        <p class="group-label">Scenarios</p>
+        <div class="chips" id="scenarios">
+          <button class="chip" type="button" data-scenario="credulous">Credulous: none vs. full vigilance</button>
+          <button class="chip" type="button" data-scenario="sceptical">Sceptical: none vs. full</button>
+          <button class="chip" type="button" data-scenario="turnover">With turnover</button>
+        </div>
+        <p class="note" id="note" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-N">Agents</label><output id="out-N" for="in-N"></output></div>
+        <input type="range" id="in-N" min="3" max="60" step="1">
+        <span class="hint">Reliabilities are drawn uniformly from 0 to 1: the chance an agent gets the truth by looking.</span>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-turn">Turnover per problem</label><output id="out-turn" for="in-turn"></output></div>
+        <input type="range" id="in-turn" min="0" max="4" step="1">
+        <span class="hint">Chance each agent is replaced by a newcomer before a problem.</span>
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-problems">Problems</label><output id="out-problems" for="in-problems"></output></div>
+        <input type="range" id="in-problems" min="0" max="4" step="1">
+      </div>
+      <div class="field">
+        <div class="field-top"><label for="in-rounds">Rounds per problem</label><output id="out-rounds" for="in-rounds"></output></div>
+        <input type="range" id="in-rounds" min="0" max="3" step="1">
+      </div>
+      <div class="field">
+        <label for="in-seed">Random seed</label>
+        <div style="display:flex; gap:6px">
+          <input type="number" id="in-seed" min="0" step="1" value="1">
+          <button class="btn small" type="button" id="btn-reseed">New</button>
+        </div>
+      </div>
+    </aside>
+    <div class="arena">
+      <div class="transport" role="toolbar" aria-label="Playback">
+        <div class="group">
+          <button class="btn primary" type="button" id="btn-play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Play</span></button>
+          <button class="btn" type="button" id="btn-step">Step</button>
+          <button class="btn" type="button" id="btn-reset">Restart</button>
+        </div>
+        <div class="speed">
+          <label for="in-speed">Speed</label>
+          <input type="range" id="in-speed" min="0" max="7" step="1">
+          <output id="out-speed" for="in-speed"></output>
+        </div>
+        <div class="round-big">Round <b id="round">0</b></div>
+        <span class="kbd-hint"><kbd>Space</kbd> play · <kbd>→</kbd> step · <kbd>R</kbd> restart</span>
+      </div>
+      <div class="panels" id="panels"></div>
+      <div class="chart-card">
+        <h3>Collective knowledge, problem by problem</h3>
+        <p class="sub">Share of agents holding the true belief over the last 20 rounds of each problem.</p>
+        <div class="chart-legend" id="kn-legend"></div>
+        <div class="chart-box" id="kn-chart"></div>
+      </div>
+      <div class="legend" aria-label="Legend">
+        <div class="item scale">
+          <div class="scale-bar"></div>
+          <div class="scale-ticks"><span>0 · unreliable</span><span></span><span>1 · reliable</span></div>
+        </div>
+        <div class="item"><span class="glyph filled"></span>Holds the true belief</div>
+        <div class="item"><span class="glyph hollow"></span>Holds the false one</div>
+        <div class="item"><span class="glyph diamond"></span>Nature</div>
+        <div class="item"><span class="edge-key"></span>Consults (thicker = more often)</div>
+        <div class="item">Bigger agents are consulted more</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="model-h">
+    <div class="section-head">
+      <span class="eyebrow">The model</span>
+      <h2 id="model-h">Urns that remember what worked</h2>
+      <p>The agents face a long run of problems with true answers. Each problem, every agent starts with the false belief and has 100 rounds to get the true one, by looking or by asking.</p>
+    </div>
+    <div class="model-grid">
+      <div class="prose">
+        <h3>Reinforcement</h3>
+        <p>Each agent has an urn with one ball for nature, one for itself and one for each other agent. Each round it draws a ball. Nature gives the true belief with probability equal to the agent’s reliability. Asking another agent means adopting their current belief. Drawing your own ball means keeping what you have. Then the agent learns whether it ended up right. If so, it adds a ball with the same name, so whatever worked gets drawn more often. Urns carry over from problem to problem, so trust builds up.</p>
+        <p>This is the Roth–Erev style of learning Barrett, Skyrms and Mohseni use. Nobody reasons about anyone’s reliability; agents just repeat what worked. Even so, unreliable agents come to defer to reliable ones, and chains form where A asks B, who asks C, who looks at the world.</p>
+        <h3>Vigilance</h3>
+        <p>Pozzi asks what happens when agents are less discriminating about crediting their sources. <b>Credulous</b> agents always credit a source that was right, and credit one that was wrong with probability 1 − V. <b>Sceptical</b> agents never credit a wrong source, and credit a right one only with probability V. At V = 1 both are Barrett et al.’s rule.</p>
+        <p>The result is a network-size effect running in opposite directions. Credulous groups get <em>worse</em> as they grow: with 100 agents, everyone mostly asks everyone, and the few reliable observers are rarely asked. Sceptical groups get <em>better</em>: with more agents there are more reliable observers to find. Full vigilance does best in both, and best of all in big groups.</p>
+        <h3>A link to the earlier models</h3>
+        <p>Here the network is the outcome, not an input. The wish behind sparse networks in the Zollman model, that people not all listen to the same unlucky source, has a counterpart: vigilant agents concentrate their trust on the reliable, which is a kind of sparsity that tracks quality. In the <a href="polarization.html">polarization model</a> trust also adapts, but to agreement rather than accuracy, and that is what breaks it.</p>
+      </div>
+      <div class="aside-card">
+        <h3>Choices made here</h3>
+        <ul>
+          <li>A failed look at nature leaves the agent with the false belief.</li>
+          <li>Turnover happens once per problem: a newcomer gets a fresh reliability and urn, and others keep their old trust in that seat, unaware it has changed hands. Applying turnover every round instead makes all communities collapse, which Pozzi’s numbers rule out.</li>
+          <li>The truth is revealed after each choice, as in the original model, so reinforcement can depend on it.</li>
+        </ul>
+        <h3>Things to try</h3>
+        <ul>
+          <li>Hover a small, red agent on the right after a few problems: who does it ask?</li>
+          <li>Raise Agents to 60 in the credulous scenario and compare the two panels’ knowledge curves.</li>
+          <li>Turnover: does trust in a seat outlive its reliable occupant?</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="exp-h">
+    <div class="section-head">
+      <span class="eyebrow">Monte Carlo experiment</span>
+      <h2 id="exp-h">How much does the community know?</h2>
+      <p>Collective knowledge on the last problem, averaged over runs. Runs of 100 agents take a while; lower the runs per point before recomputing.</p>
+    </div>
+    <div id="exp"></div>
+    <div class="chart-card" style="margin-top:14px">
+      <h3>Learning over successive problems (Pozzi, Figs. 1–2)</h3>
+      <p class="sub">100 agents, no turnover, 100 runs each. Credulous solid, sceptical dashed.</p>
+      <div class="chart-legend" id="cv-legend"></div>
+      <div class="chart-box" id="cv-chart"></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="read-h">
+    <div class="section-head">
+      <span class="eyebrow">Sources and checks</span>
+      <h2 id="read-h">Where this comes from</h2>
+    </div>
+    <ul class="refs">
+      <li><b>Barrett, J. A., Skyrms, B. &amp; Mohseni, A. (2019). Self-assembling networks.</b> <i>BJPS</i> 70(1): 301–325. <span class="why">The urn model of learning whom to consult. We could not retrieve the paper itself; the mechanism here follows its descriptions in the two papers below.</span></li>
+      <li><b>Pozzi, M. (2025). <a href="https://cifma.github.io/Papers-2025/S4-5-Pozzi.pdf">From individual trust to collective knowledge: modeling epistemic vigilance.</a></b> CIFMA 2025. <span class="why">The vigilance parameter, the credulous and sceptical scenarios, 100 problems of 100 rounds, and the numbers below.</span></li>
+      <li><b>Douven, I. &amp; Kriegeskorte, N. (2026). The emergent basis of expert trust.</b> <i>Philosophy of Science</i>. <span class="why">Describes Barrett et al.’s model and extends it to real human judgment data.</span></li>
+      <li><b>Checks.</b> <span class="why">Without turnover this engine gives 0.64 / 0.26 (credulous, V = 0, 5 / 100 agents), 0.84 (credulous, V = 1, 100), 0.50 / 0.63 (sceptical, V = 0, 5 / 100) and 0.80 / 0.87 (sceptical, V = 1, 5 / 100). Pozzi reports 0.64 / 0.24, 0.85, 0.52 / 0.61 and 0.78 / 0.86. With turnover (the preset, 150 runs per point), sceptical agents get 0.78 at V = 0.5 and 0.70 at V = 1, against her 0.79 and 0.74: partial vigilance does a little better than full, as she reports.</span></li>
+    </ul>
+  </section>
+  <footer>Part of the network epistemology testbed.</footer>
+</div>
+<script src="lib/rng.js"></script>
+<script src="lib/networks.js"></script>
+<script src="lib/charts.js"></script>
+<script src="lib/views.js"></script>
+<script src="lib/lab.js"></script>
+<script src="lib/sweep.js"></script>
+<script src="lib/experiment-ui.js"></script>
+<script src="models/zollman.js"></script>
+<script src="models/beta-bandit.js"></script>
+<script src="models/propaganda.js"></script>
+<script src="models/trust.js"></script>
+<script src="models/experiments.js"></script>
+<script src="data/trust-presets.js"></script>
+<script src="app/trust-app.js"></script>
+<script>
+(function () {
+  const { experimentUI: XUI, experiments: EX, sweep: SW, charts: CH } = window.NET;
+  const P = window.NET.trustPresets || {};
+  const presets = {};
+  for (const [k, p] of Object.entries(P)) if (!k.startsWith('_')) presets[k] = p;
+  const f2 = (v) => (v == null ? '–' : v.toFixed(2));
+  XUI.mount(document.getElementById('exp'), {
+    variables: {
+      V: { name: 'V', label: 'Vigilance, V', kind: 'num', min: 0, max: 1, defaults: '0, 0.25, 0.5, 0.75, 1' },
+      N: { name: 'N', label: 'Number of agents', kind: 'int', min: 2, max: 200, defaults: '5, 20, 50, 100' },
+      scenario: { name: 'scenario', label: 'Scenario', kind: 'enum', options: [['credulous', 'Credulous'], ['sceptical', 'Sceptical']], defaults: 'credulous, sceptical' },
+      turnover: { name: 'turnover', label: 'Turnover per problem', kind: 'num', min: 0, max: 1, defaults: '0, 0.02, 0.05, 0.1' },
+      problems: { name: 'problems', label: 'Problems', kind: 'int', min: 1, max: 1000, defaults: '10, 50, 100' },
+      rounds: { name: 'rounds', label: 'Rounds per problem', kind: 'int', min: 21, max: 1000, defaults: '50, 100, 200' },
+    },
+    varyKeys: ['V', 'N', 'turnover', 'problems', 'rounds', 'scenario'],
+    seriesKeys: ['N', 'scenario', 'V', 'turnover'],
+    fixed: { V: 1, N: 100, scenario: 'credulous', turnover: 0, problems: 100, rounds: 100 },
+    metrics: {
+      last: { label: 'Collective knowledge on the last problem', sub: 'Mean share of agents with the true belief over its last 20 rounds.', value: (a) => SW.mean(a, 'last'), domain: [0, 1], fmt: f2 },
+      mean: { label: 'Collective knowledge, averaged over all problems', sub: 'Includes the early problems, before trust has formed.', value: (a) => SW.mean(a, 'mean'), domain: [0, 1], fmt: f2 },
+      first: { label: 'Collective knowledge on the first problem', sub: 'Before anyone has learned whom to trust.', value: (a) => SW.mean(a, 'first'), domain: [0, 1], fmt: f2 },
+    },
+    defaultMetric: 'last', runs: 20, runOne: EX.trust,
+    tableHead: 'last · all problems',
+    tableCell: (a) => `${f2(SW.mean(a, 'last'))} · ${f2(SW.mean(a, 'mean'))}`,
+    presets, defaultPreset: 'credulous',
+  });
+  const C = P._curves;
+  if (C) {
+    const colors = { 0: 'var(--s8)', 0.5: 'var(--s4)', 1: 'var(--s1)' };
+    const series = [];
+    for (const sc of ['credulous', 'sceptical']) for (const V of [0, 0.5, 1]) {
+      const ys = C[`${sc}-${V}`];
+      if (ys) series.push({ key: sc + V, label: `${sc === 'credulous' ? 'Credulous' : 'Sceptical'}, V = ${V}`, color: colors[V], ys, dash: sc === 'sceptical' });
+    }
+    CH.legend(document.getElementById('cv-legend'), series);
+    CH.lineChart(document.getElementById('cv-chart'), {
+      xs: series[0].ys.map((_, i) => i + 1), xName: 'problem', xLabel: 'Problem', yDomain: [0, 1], yFormat: (v) => v.toFixed(1),
+      series, height: 260, markers: false, ariaLabel: 'Knowledge over problems', valueText: (s, i) => s.ys[i].toFixed(2),
+    });
+  }
+})();
+</script>
+</body>
+</html>
